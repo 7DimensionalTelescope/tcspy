@@ -3,6 +3,7 @@ from tcspy.configuration import mainConfig
 from tcspy.devices.camera import mainCamera
 from tcspy.devices.focuser import mainFocuser_Alpaca
 from tcspy.devices.focuser import mainFocuser_pwi4
+from tcspy.devices.focuser import mainFocuser_NINA
 from tcspy.devices.filterwheel import mainFilterwheel
 from tcspy.devices.observer import mainObserver
 from tcspy.devices.weather import mainWeather
@@ -38,7 +39,7 @@ class SingleTelescope(mainConfig):
         The camera device.
     mount : mainMount_Alpaca or mainMount_pwi4
         The mount device.
-    focuser : mainFocuser_Alpaca or mainFocuser_pwi4
+    focuser : mainFocuser_Alpaca or mainFocuser_pwi4 or mainFocuser_NINA
         The focuser device.
     filterwheel : mainFilterwheel
         The filter wheel device.
@@ -188,6 +189,8 @@ class SingleTelescope(mainConfig):
             return mainFocuser_Alpaca(unitnum= self.unitnum)
         elif self.focus_type.lower() == 'pwi4':
             return mainFocuser_pwi4(unitnum= self.unitnum)
+        elif self.focus_type.lower() == 'nina':
+            return mainFocuser_NINA(unitnum= self.unitnum)
         else:
             return FocuserTypeError(f'Focuser Type "{self.focus_type}" is not defined')
     
@@ -208,5 +211,5 @@ class SingleTelescope(mainConfig):
 
 # %%
 if __name__ == '__main__':
-    S = SingleTelescope(1)
+    S = SingleTelescope(36)
 # %%

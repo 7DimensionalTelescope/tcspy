@@ -1,0 +1,485 @@
+Focuser
+Information
+GET
+/equipment/focuser/info
+Get the focuser info
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response object Required
+Show Response attributes
+object
+Error string Required
+StatusCode integer Required
+Success boolean Required
+Type string Required
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/info
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/info'
+Response examples (200)
+{
+  "Response": {
+    "Position": 42,
+    "StepSize": 42,
+    "Temperature": 42.0,
+    "IsMoving": true,
+    "IsSettling": true,
+    "TempComp": true,
+    "TempCompAvailable": true,
+    "SupportedActions": [],
+    "Connected": true,
+    "Name": "string",
+    "DisplayName": "string",
+    "Description": "string",
+    "DriverInfo": "string",
+    "DriverVersion": "string",
+    "DeviceId": "string"
+  },
+  "Error": "string",
+  "StatusCode": 42,
+  "Success": true,
+  "Type": "string"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Connect
+GET
+/equipment/focuser/connect
+Connect to Focuser
+
+Query parameters
+to string
+The Id of the device that should be connected.
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response string
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/connect
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/connect'
+Response examples (200)
+{
+  "Response": "Connected",
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Disconnect
+GET
+/equipment/focuser/disconnect
+Disconnect the focuser
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response string
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/disconnect
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/disconnect'
+Response examples (200)
+{
+  "Response": "Disconnected",
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+List Devices
+GET
+/equipment/focuser/list-devices
+List all devices which can be connected
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response array[object]
+Show Response attributes
+object
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/list-devices
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/list-devices'
+Response examples (200)
+{
+  "Response": [
+    {
+      "HasSetupDialog": true,
+      "Id": "string",
+      "Name": "string",
+      "DisplayName": "string",
+      "Category": "string",
+      "Connected": true,
+      "Description": "string",
+      "DriverInfo": "string",
+      "DriverVersion": "string",
+      "SupportedActions": []
+    }
+  ],
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Rescan Devices
+GET
+/equipment/focuser/rescan
+Rescans for new devices, and returns a list of all available devices
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response array[object]
+Show Response attributes
+object
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/rescan
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/rescan'
+Response examples (200)
+{
+  "Response": [
+    {
+      "HasSetupDialog": true,
+      "Id": "string",
+      "Name": "string",
+      "DisplayName": "string",
+      "Category": "string",
+      "Connected": true,
+      "Description": "string",
+      "DriverInfo": "string",
+      "DriverVersion": "string",
+      "SupportedActions": []
+    }
+  ],
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Move
+GET
+/equipment/focuser/move
+Move the focuser
+
+Query parameters
+position integer Required
+Position to move to
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response string
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/move
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/move?position=42'
+Response examples (200)
+{
+  "Response": "Move started",
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Auto Focus
+GET
+/equipment/focuser/auto-focus
+Start an AF
+
+Query parameters
+cancel boolean
+Can be used to cancel a running autofocus (If it was started using the api)
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response string
+Values are Autofocus started or Autofocus canceled.
+
+Error string
+StatusCode integer
+Success boolean
+Type string
+ 409
+application/json
+Focuser not connected
+
+Show response attributes
+object
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/auto-focus
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/auto-focus'
+Response examples (200)
+{
+  "Response": "Autofocus started",
+  "Error": "string",
+  "StatusCode": 200,
+  "Success": true,
+  "Type": "API"
+}
+Response examples (409)
+{
+  "Response": "string",
+  "Error": "Focuser not connected",
+  "StatusCode": 409,
+  "Success": false,
+  "Type": "API"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}
+Get Last Autofocus
+GET
+/equipment/focuser/last-af
+Get last autofocus
+
+Responses
+ 200
+application/json
+Successful response
+
+Hide response attributes
+object
+Response object Required
+Show Response attributes
+object
+Error string Required
+StatusCode integer Required
+Success boolean Required
+Type string Required
+ 500
+application/json
+Internal server error, Unknown error
+
+Show response attributes
+object
+GET
+/equipment/focuser/last-af
+curl \
+ --request GET 'http://localhost:1888/v2/api/equipment/focuser/last-af'
+Response examples (200)
+{
+  "Response": {
+    "Version": 42,
+    "Filter": "string",
+    "AutoFocuserName": "string",
+    "StarDetectorName": "string",
+    "Timestamp": "string",
+    "Temperature": 42.0,
+    "Method": "string",
+    "Fitting": "string",
+    "InitialFocusPoint": {
+      "Position": 42,
+      "Value": 42.0,
+      "Error": 42
+    },
+    "CalculatedFocusPoint": {
+      "Position": 42.0,
+      "Value": 42.0,
+      "Error": 42
+    },
+    "PreviousFocusPoint": {
+      "Position": 42.0,
+      "Value": 42.0,
+      "Error": 42
+    },
+    "MeasurePoints": [
+      {
+        "Position": 42,
+        "Value": 42.0,
+        "Error": 42.0
+      }
+    ],
+    "Intersections": {
+      "TrendLineIntersection": {
+        "Position": 42,
+        "Value": 42.0,
+        "Error": 42
+      },
+      "HyperbolicMinimum": {
+        "Position": 42.0,
+        "Value": 42.0,
+        "Error": 42
+      }
+    },
+    "Fittings": {
+      "Quadratic": "string",
+      "Hyperbolic": "string",
+      "Gaussian": "string",
+      "LeftTrend": "string",
+      "RightTrend": "string"
+    },
+    "RSquares": {
+      "Quadratic": 42.0,
+      "Hyperbolic": 42.0,
+      "LeftTrend": 42.0,
+      "RightTrend": 42
+    },
+    "BacklashCompensation": {
+      "BacklashCompensationModel": "string",
+      "BacklashIN": 42,
+      "BacklashOUT": 42
+    },
+    "Duration": "string"
+  },
+  "Error": "string",
+  "StatusCode": 42,
+  "Success": true,
+  "Type": "string"
+}
+Response examples (500)
+{
+  "Response": "string",
+  "Error": "Unknown error",
+  "StatusCode": 500,
+  "Success": false,
+  "Type": "API"
+}

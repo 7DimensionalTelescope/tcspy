@@ -594,3 +594,7 @@ class mainCamera(mainConfig):
         self.device.BinX = self.device.BinY = binning
         self.device.NumX = self.device.CameraXSize // self.device.BinX
         self.device.NumY = self.device.CameraYSize // self.device.BinY
+
+# %%
+if __name__ == '__main__':
+    C = mainCamera(unitnum = 36)

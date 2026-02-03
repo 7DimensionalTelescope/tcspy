@@ -46,6 +46,7 @@ applications/tmp.py
 configuration/__init__.py
 configuration/focusmodel.py
 configuration/mainconfig.py
+devices/NINA_client.py
 devices/__init__.py
 devices/multitelescopes.py
 devices/power.py

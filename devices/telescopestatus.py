@@ -111,6 +111,14 @@ class TelescopeStatus(Interface):
                     status = 'idle'
                 if focuser.device.IsMoving:
                     status = 'busy'
+            # NINA device
+            elif self.telescope.focus_type.lower() == 'nina':
+                focuser_info = focuser.device.focuser_info()
+                response = focuser_info['Response']
+                if response['Connected']:
+                    status = 'idle'
+                if response['IsMoving'] or response['IsSettling']:
+                    status = 'busy'
             # PWI4 device
             else:
                 focuser_status = focuser.device.status()
