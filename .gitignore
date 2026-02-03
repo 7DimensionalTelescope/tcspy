@@ -1,4 +1,10 @@
-.pyc
-.ipynb_checkpoints
-.ipynb
-.codegpt
+# Byte-compiled / optimized / DLL files
+**/*.pyc
+**/__pycache__/
+
+# Jupyter Notebook
+*.ipynb
+**/.ipynb_checkpoints/
+
+# Other tools
+.codegpt/
