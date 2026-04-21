@@ -348,6 +348,6 @@ class mainFocuser_pwi4(mainConfig):
 
 # %%
 if __name__ == '__main__':
-    F = mainFocuser_pwi4(1)
-    F.autofocus_start(Event())
+    F = mainFocuser_pwi4(36)
+    # F.autofocus_start(Event())
 # %%

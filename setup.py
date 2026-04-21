@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 import os
 
@@ -10,7 +10,8 @@ def read_requirements():
 setup(
     name='tcspy',
     version='1.0.5',
-    packages=find_packages(),  # Automatically finds the inner 'tippy'
+    packages=['tcspy'],
+    package_dir={'tcspy': '.'},
     author='Hyeonho Choi',
     description='Telescope Control System with python',
     long_description=open('README.md').read() if os.path.exists('README.md') else '',

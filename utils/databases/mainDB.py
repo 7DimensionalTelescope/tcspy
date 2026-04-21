@@ -1,13 +1,8 @@
-
-
-
 #%%
 from astropy.time import Time
-
 from tcspy.utils.databases import *
 from tcspy.configuration import mainConfig
 #%%
-
 class DB(mainConfig):
     """
     A class used to handle actions with the database.
@@ -19,15 +14,15 @@ class DB(mainConfig):
 
     Attributes
     ----------
-    Daily : DB_Daily
-        An instance of the DB_Daily class updated at utctime.
+    Daily : DB_Dynamic
+        An instance of the DB_Dynamic class updated at utctime.
     RIS : DB_Annual
-        An instance of the DB_AFIS class updated at utcdate.
+        An instance of the DB_Annual class updated at utcdate.
 
     Methods
     -------
     update_Daily(utctime)
-        Returns an instance of DB_Daily updated at utctime.
+        Returns an instance of DB_Dynamic updated at utctime.
     update_RIS(utcdate)
         Returns an instance of DB_Annual updated at utcdate.
     """
@@ -40,7 +35,7 @@ class DB(mainConfig):
     
     def update_Daily(self, utctime):
         """
-        Returns an instance of DB_Daily updated at utctime.
+        Returns an instance of DB_Dynamic updated at utctime.
 
         Parameters
         ----------
@@ -49,10 +44,10 @@ class DB(mainConfig):
 
         Returns
         -------
-        DB_Daily
-            An instance of the DB_Daily class updated at utctime.
+        DB_Dynamic
+            An instance of the DB_Dynamic class updated at utctime.
         """
-        Daily = DB_Daily(utctime = utctime, tbl_name = 'Daily')
+        Daily = DB_Dynamic(utctime = utctime, tbl_name = 'Daily')
         return Daily
 
     def update_RIS(self):

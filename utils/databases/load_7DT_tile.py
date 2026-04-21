@@ -2,7 +2,7 @@
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 import astropy.units as u
-from utils.connector.SQLConnector import SQLConnector
+from utils.connector.SQLconnector import SQLConnector
 # %%
 sql = SQLConnector(db_name = 'target', id_user = 'hhchoi', pwd_user = 'gusgh1020!')
 # %% 

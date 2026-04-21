@@ -1,4 +1,4 @@
-alpaca==1.0.0
+alpyca==3.1.2
 astroplan==0.10.1
 astropy==7.0.1
 ccdproc==2.4.3

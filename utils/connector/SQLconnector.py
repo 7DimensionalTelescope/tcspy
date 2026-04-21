@@ -8,8 +8,8 @@ import numpy as np
 
 class SQLConnector:
     def __init__(self,
-                 id_user: str = 'hhchoi',
-                 pwd_user: str = 'gusgh1020!',
+                 id_user: str = 'snu',
+                 pwd_user: str = 'astro19315',
                  host_user: str = 'localhost',
                  db_name: str = 'target',
                  pool_name: str = 'mypool',
@@ -49,7 +49,14 @@ class SQLConnector:
             cursor.execute(sql_command, params)
             if commit:
                 conn.commit()
-            return cursor
+            
+            # Fetch results immediately if it is a selection query
+            result = None
+            if cursor.description: # Checks if the query returns rows (like SELECT)
+                result = cursor.fetchall()
+            else:
+                result = True # For successful INSERT/UPDATE/CREATE
+            return result
         except Error as e:
             conn.rollback()
             print(f"Error: {e}")
@@ -58,10 +65,29 @@ class SQLConnector:
             cursor.close()
             conn.close()
 
+    # def execute(self, sql_command, params=None, commit=False):
+    #     conn = self.connect()
+    #     cursor = conn.cursor(buffered=True)
+    #     try:
+    #         cursor.execute(sql_command, params)
+    #         if commit:
+    #             conn.commit()
+    #         return cursor
+    #     except Error as e:
+    #         conn.rollback()
+    #         print(f"Error: {e}")
+    #         return None
+    #     finally:
+    #         cursor.close()
+    #         conn.close()
+
     @property
     def databases(self):
-        cursor = self.execute("SHOW DATABASES")
-        return [db_name[0] for db_name in cursor] if cursor else []
+        # cursor = self.execute("SHOW DATABASES")
+        # return [db_name[0] for db_name in cursor] if cursor else []
+        results = self.execute("SHOW DATABASES")
+        return [db_name[0] for db_name in results] if results else []
+
 
     def change_db(self, db_name: str):
         self.db_name = db_name
@@ -89,13 +115,23 @@ class SQLConnector:
     def remove_tbl(self, tbl_name: str):
         self.execute(f"DROP TABLE {tbl_name}", commit=True)
 
+    # def get_colnames(self, tbl_name: str):
+    #     cursor = self.execute(f"SHOW COLUMNS FROM {tbl_name};")
+    #     return [column[0] for column in cursor.fetchall()] if cursor else []
+
     def get_colnames(self, tbl_name: str):
-        cursor = self.execute(f"SHOW COLUMNS FROM {tbl_name};")
-        return [column[0] for column in cursor.fetchall()] if cursor else []
+        # self.execute now returns the list of rows (fetchall result) directly
+        rows = self.execute(f"SHOW COLUMNS FROM {tbl_name};")
+        return [column[0] for column in rows] if rows else []
+
+    # def get_column_data_types(self, tbl_name: str):
+    #     cursor = self.execute(f"SHOW COLUMNS FROM {tbl_name}")
+    #     column_info = cursor.fetchall() if cursor else []
+    #     return {col[0]: col[1] for col in column_info}
 
     def get_column_data_types(self, tbl_name: str):
-        cursor = self.execute(f"SHOW COLUMNS FROM {tbl_name}")
-        column_info = cursor.fetchall() if cursor else []
+        column_info = self.execute(f"SHOW COLUMNS FROM {tbl_name}")
+        if not column_info: return {}
         return {col[0]: col[1] for col in column_info}
 
     def remove_rows(self, tbl_name: str, ids: list or str):
@@ -164,8 +200,10 @@ class SQLConnector:
         sql_command = f"SELECT {select_key} FROM {tbl_name}"
         if where_value:
             sql_command = f"SELECT {select_key} FROM {tbl_name} WHERE {where_key} = '{where_value}'"
-        cursor = self.execute(sql_command)
-        output = cursor.fetchall() if cursor else []
+        # cursor = self.execute(sql_command)
+        # output = cursor.fetchall() if cursor else []
+        output = self.execute(sql_command)
+        if output is None: output = []
         if out_format.lower() == 'table':
             result = Table()
         else:
@@ -193,4 +231,17 @@ class SQLConnector:
         print(f"Pool size: {self.pool.pool_size}")
         #print(f"Connections in pool: {len(self.pool.get_connection())}")
         #print(f"Connections in use: {pool.pool_size - len(pool._idle_cache)}")
+# %%
+if __name__ == '__main__':
+    self = SQLConnector()
+    from astropy.table import Table
+    tbl = Table()
+    tbl['objname'] = ['Test']
+    tbl['RA'] = 10
+    tbl['De'] = - 20
+    tbl['exptime'] = 3
+    tbl['count'] = 3
+    tbl['obsmode'] = 'Single'
+    self.insert_rows('Dynamic', tbl)
+
 # %%

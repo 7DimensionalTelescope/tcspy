@@ -287,7 +287,7 @@ class Tiles:
 # %%
 # Example usage
 if __name__ == "__main__":
-    from tcspy.utils.databases.DB_daily import DB_Daily
+    from tcspy.utils.databases.DB_dynamic import DB_Dynamic
     #tbl = ascii.read('./Subset_White_Dwarfs_with_Matched_Tiles.csv')
     T = Tiles()
     #data = ascii.read('./7DT_observed_Tile')

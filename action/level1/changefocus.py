@@ -7,7 +7,7 @@ from tcspy.devices import TelescopeStatus
 from tcspy.interfaces import *
 from tcspy.utils.logger import mainLogger
 from tcspy.utils.exception import *
-
+#%%
 class ChangeFocus(Interface_Runnable, Interface_Abortable):
     """
     A class representing a change focus action for a single telescope.
@@ -152,4 +152,11 @@ class ChangeFocus(Interface_Runnable, Interface_Abortable):
         self.shared_memory['is_running'] = False
         self.is_running = False
         raise AbortionException(f'[{type(self).__name__}] is aborted.')
+# %%
+if __name__ == '__main__':
+    from tcspy.devices import SingleTelescope
+    from multiprocessing import Event
+    tel = SingleTelescope(36)
+    abort_action = Event()
+    self= ChangeFocus(tel, abort_action)
 # %%

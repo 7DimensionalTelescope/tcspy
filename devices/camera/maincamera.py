@@ -331,61 +331,62 @@ class mainCamera(mainConfig):
         self.device_lock.acquire()
         exception_raised = None
         
-        try:
-            if self.device.CanSetCCDTemperature:
-                self.device.CoolerOn = True
-                while not self.device.CoolerOn:
-                    time.sleep(float(self.config['CAMERA_CHECKTIME']))
-                self.device.SetCCDTemperature = settemperature
-                self._log.info('Start cooling...')
+        # try:
+        #     if self.device.CanSetCCDTemperature:
+        #         self.device.CoolerOn = True
+        #         while not self.device.CoolerOn:
+        #             time.sleep(float(self.config['CAMERA_CHECKTIME']))
+        #         self.device.SetCCDTemperature = settemperature
+        #         self._log.info('Start cooling...')
                 
-                # Initialize variables for tracking temperature and gradient
-                prev_temperature = self.device.CCDTemperature
-                consecutive_stable_iterations = 0
-                current_temperature = self.device.CCDTemperature
+        #         # Initialize variables for tracking temperature and gradient
+        #         prev_temperature = self.device.CCDTemperature
+        #         consecutive_stable_iterations = 0
+        #         current_temperature = self.device.CCDTemperature
 
-                while not np.abs(self.device.CCDTemperature - settemperature) < tolerance:
-                    if abort_action.is_set():
-                        self.device.CoolerOn = False
-                        self._log.warning('Camera cooling is aborted')
-                        raise AbortionException('Camera cooling is aborted')
-                    current_temperature = self.device.CCDTemperature
-                    cooler_power = None
-                    if self.device.CanGetCoolerPower:
-                        cooler_power = self.device.CoolerPower
+        #         while not np.abs(self.device.CCDTemperature - settemperature) < tolerance:
+        #             if abort_action.is_set():
+        #                 self.device.CoolerOn = False
+        #                 self._log.warning('Camera cooling is aborted')
+        #                 raise AbortionException('Camera cooling is aborted')
+        #             current_temperature = self.device.CCDTemperature
+        #             cooler_power = None
+        #             if self.device.CanGetCoolerPower:
+        #                 cooler_power = self.device.CoolerPower
                     
-                    # Calculate the gradient
-                    gradient = current_temperature - prev_temperature
+        #             # Calculate the gradient
+        #             gradient = current_temperature - prev_temperature
                     
-                    if gradient > -0.3:  # Adjust the threshold as needed
-                        consecutive_stable_iterations += 1
-                    else:
-                        consecutive_stable_iterations = 0
+        #             if gradient > -0.3:  # Adjust the threshold as needed
+        #                 consecutive_stable_iterations += 1
+        #             else:
+        #                 consecutive_stable_iterations = 0
 
-                    # Check if the temperature has been stable for too long
-                    if consecutive_stable_iterations >= max_consecutive_stable_iterations:
-                        self._log.warning('CCD Temperature cannot be reached to the set temp, current temp: {}'.format(self.device.CCDTemperature))
-                        raise CoolingFailedException('Cooling operation has stalled: camera cannot reach the set temperature')
+        #             # Check if the temperature has been stable for too long
+        #             if consecutive_stable_iterations >= max_consecutive_stable_iterations:
+        #                 self._log.warning('CCD Temperature cannot be reached to the set temp, current temp: {}'.format(self.device.CCDTemperature))
+        #                 raise CoolingFailedException('Cooling operation has stalled: camera cannot reach the set temperature')
 
-                    self._log.info('Current temperature: %.1f [Power: %d]' % (current_temperature,cooler_power))
-                    time.sleep(5)
+        #             self._log.info('Current temperature: %.1f [Power: %d]' % (current_temperature,cooler_power))
+        #             time.sleep(5)
                     
-                    # Update the previous temperature for the next iteration
-                    prev_temperature = current_temperature
-                self._log.info('Cooling finished. Current temperature: %.1f' % self.device.CCDTemperature)
-                return True
-            else:
-                self._log.critical('Cooling is not implemented on this device')
-                raise CoolingFailedException('Cooling is not implemented on this device')
+        #             # Update the previous temperature for the next iteration
+        #             prev_temperature = current_temperature
+        #         self._log.info('Cooling finished. Current temperature: %.1f' % self.device.CCDTemperature)
+        #         return True
+        #     else:
+        #         self._log.critical('Cooling is not implemented on this device')
+        #         raise CoolingFailedException('Cooling is not implemented on this device')
 
-        except Exception as e:
-            exception_raised = e
+        # except Exception as e:
+        #     exception_raised = e
         
-        finally:
-            self.device_lock.release()
-            self.is_idle.set()
-            if exception_raised:
-                raise exception_raised
+        # finally:
+        #     self.device_lock.release()
+        #     self.is_idle.set()
+        #     if exception_raised:
+        #         raise exception_raised
+        return True
             
     def warm(self,
              abort_action : Event,
@@ -411,61 +412,61 @@ class mainCamera(mainConfig):
         self.device_lock.acquire()
         exception_raised = None
                 
-        try:
-            if self.device.CanSetCCDTemperature:
-                self.device.SetCCDTemperature = settemperature
-                self._log.info('Start warning...')
+        # try:
+        #     if self.device.CanSetCCDTemperature:
+        #         self.device.SetCCDTemperature = settemperature
+        #         self._log.info('Start warning...')
                 
-                # Initialize variables for tracking temperature and gradient
-                prev_temperature = self.device.CCDTemperature
-                consecutive_stable_iterations = 0
-                current_temperature = self.device.CCDTemperature
+        #         # Initialize variables for tracking temperature and gradient
+        #         prev_temperature = self.device.CCDTemperature
+        #         consecutive_stable_iterations = 0
+        #         current_temperature = self.device.CCDTemperature
                 
-                while not np.abs(self.device.CCDTemperature - settemperature) < tolerance:
-                    if abort_action.is_set():
-                        self.device.CoolerOn = False
-                        self._log.warning('Camera warming is aborted')
-                        raise AbortionException('Camera cooling is aborted')
-                    current_temperature = self.device.CCDTemperature
-                    cooler_power = None
-                    if self.device.CanGetCoolerPower:
-                        cooler_power = self.device.CoolerPower
+        #         while not np.abs(self.device.CCDTemperature - settemperature) < tolerance:
+        #             if abort_action.is_set():
+        #                 self.device.CoolerOn = False
+        #                 self._log.warning('Camera warming is aborted')
+        #                 raise AbortionException('Camera cooling is aborted')
+        #             current_temperature = self.device.CCDTemperature
+        #             cooler_power = None
+        #             if self.device.CanGetCoolerPower:
+        #                 cooler_power = self.device.CoolerPower
                         
-                    # Calculate the gradient
-                    gradient = current_temperature - prev_temperature
+        #             # Calculate the gradient
+        #             gradient = current_temperature - prev_temperature
                     
-                    if gradient < 0.3:  # Adjust the threshold as needed
-                        consecutive_stable_iterations += 1
-                    else:
-                        consecutive_stable_iterations = 0
+        #             if gradient < 0.3:  # Adjust the threshold as needed
+        #                 consecutive_stable_iterations += 1
+        #             else:
+        #                 consecutive_stable_iterations = 0
 
-                    # Check if the temperature has been stable for too long
-                    if consecutive_stable_iterations >= max_consecutive_stable_iterations:
-                        self._log.warning('CCD Temperature cannot be reached to the set temp, current temp: {}'.format(self.device.CCDTemperature))
-                        break
+        #             # Check if the temperature has been stable for too long
+        #             if consecutive_stable_iterations >= max_consecutive_stable_iterations:
+        #                 self._log.warning('CCD Temperature cannot be reached to the set temp, current temp: {}'.format(self.device.CCDTemperature))
+        #                 break
 
-                    self._log.info('Current temperature: %.1f [Power: %d]' % (current_temperature,cooler_power))
-                    time.sleep(5)
+        #             self._log.info('Current temperature: %.1f [Power: %d]' % (current_temperature,cooler_power))
+        #             time.sleep(5)
                     
-                    # Update the previous temperature for the next iteration
-                    prev_temperature = current_temperature
-                self._log.info('Warning finished. Current temperature: %.1f' % self.device.CCDTemperature)
-                self.device.CoolerOn = False
-                self._log.info('Cooler is turned off')
-                return True
-            else:
-                self._log.critical('Warming is not implemented on this device')
-                raise WarmingFailedException('Warming is not implemented on this device')
+        #             # Update the previous temperature for the next iteration
+        #             prev_temperature = current_temperature
+        #         self._log.info('Warning finished. Current temperature: %.1f' % self.device.CCDTemperature)
+        #         self.device.CoolerOn = False
+        #         self._log.info('Cooler is turned off')
+        #         return True
+        #     else:
+        #         self._log.critical('Warming is not implemented on this device')
+        #         raise WarmingFailedException('Warming is not implemented on this device')
 
-        except Exception as e:
-            exception_raised = e
+        # except Exception as e:
+        #     exception_raised = e
         
-        finally:
-            self.device_lock.release()
-            self.is_idle.set()
-            if exception_raised:
-                raise exception_raised
-            
+        # finally:
+        #     self.device_lock.release()
+        #     self.is_idle.set()
+        #     if exception_raised:
+        #         raise exception_raised
+        return True
     def exposure(self,
                  abort_action : Event,
                  exptime : float,
@@ -598,3 +599,7 @@ class mainCamera(mainConfig):
 # %%
 if __name__ == '__main__':
     C = mainCamera(unitnum = 36)
+    # result= C.exposure(Event(), 10, 'BIAS', 1, True)
+    #C.connect()
+    #C.exposure(abort_action = Event(), exptime = 10, imgtype = 'Flat', binning = 1, is_light = False)
+# %%

@@ -5,6 +5,8 @@ from astropy.time import Time
 import astropy.units as u
 import time
 
+from numpy import False_
+
 from tcspy.devices import SingleTelescope
 from tcspy.devices import TelescopeStatus
 from tcspy.interfaces import *
@@ -61,7 +63,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
             exptime : str,
             count : str,
             obsmode : str = 'Single',
-            filter_ : str = None,
+            filter_ : str = 'r',
             specmode : str = None,
             colormode : str = None,
             ntelescope : int = 1,
@@ -563,42 +565,95 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
 
 #%%    
 if __name__ == '__main__':
-    from threading import Thread
-    kwargs = dict(
-    exptime= '100,100',
-    count= '1,1',
-    filter_ = 'g,r',
-    binning= '2,2',
-    imgtype = 'Light',
-    ra= 196.109,
-    dec= -23.774,
-    name = "COSMOS",
-    objtype = 'Commissioning',
-    autofocus_before_start= True,
-    autofocus_when_filterchange= True)              
-    from multiprocessing import Process
-    abort_action = Event()
-    s = SingleObservation(SingleTelescope(2),abort_action)
-    p = Process(target = s.run, kwargs = kwargs)
-    p.start()
+    tel = SingleTelescope(36)
+    self = SingleObservation(tel, Event())
+    self.run(exptime = 0, count = 10, filter_ = 'r', imgtype = 'BIAS', alt = 40, az = 270, name= 'BIAS')
 # %%
 if __name__ == '__main__':
-    s.abort()
+    tel = SingleTelescope(36)
+    self = SingleObservation(tel, Event())
+    self.run(exptime = 100, count = 10, filter_ = 'r', imgtype = 'DARK', alt = 40, az = 170, name= 'DARK')
 # %%
 if __name__ == '__main__':
-    kwargs = dict(exptime = '5,5', 
-                count = '2,2', 
-                filter_ = 'g,r', 
-                binning = '1', 
-                imgtype = 'Light',
-                ra = 200.5, 
-                dec = -58.0666 , 
-                obsmode = 'Single',
-                autofocus_before_start = False, 
-                autofocus_when_filterchange= False,
-                observation_status = None)
-    from multiprocessing import Process
-    s = SingleObservation(SingleTelescope(7),Event())
-    p = Process(target = s.run, kwargs = kwargs)
-    p.start()
-#%%
+    tel = SingleTelescope(36)
+    self = SingleObservation(tel, Event())
+    self.run(exptime = 60, count = 10, filter_ = 'r', imgtype = 'DARK', alt = 40, az = 270, name= 'DARK')
+# %%
+if __name__ == '__main__':
+    tel = SingleTelescope(36)
+    self = SingleObservation(tel, Event())
+    for ra, dec in [(219.14, -80.378), (10.97, -18.88), (14.60, 19.67), (18.22, -19.02)]: # 180,40 / 270,40 / 0, 40 / 90, 40
+        self.run(
+            exptime = '10',
+            count = '1',
+            obsmode = 'Single',
+            filter_ = 'r',
+            specmode = None,
+            colormode = None,
+            ntelescope = 1,
+            gain = 25,
+            binning = '1',
+            imgtype = 'LIGHT',
+            
+            # Target information
+            ra = ra, # When radec == None: do not move 
+            dec = dec,  
+            alt = None, # When altaz == None: do not move 
+            az = None,
+            name = f'Ra_{ra}_Dec_{dec}',
+            objtype = 'Test',
+            id_ = None,
+            note = 'Test',
+            comment = 'Test',
+            is_ToO = False,
+            
+            # Auxiliary parameters
+            force_slewing = False,
+            autofocus_use_history = False,
+            autofocus_history_duration = 60,
+            autofocus_before_start = False,
+            autofocus_when_filterchange = False,
+            autofocus_when_elapsed = False,
+            autofocus_elapsed_duration = 60,
+            observation_status = None,
+        )
+## %%
+# %%
+if __name__ == '__main__':
+    tel = SingleTelescope(36)
+    self = SingleObservation(tel, Event())
+    self.run(
+        exptime = '10',
+        count = '1',
+        obsmode = 'Single',
+        filter_ = 'r',
+        specmode = None,
+        colormode = None,
+        ntelescope = 1,
+        gain = 25,
+        binning = '1',
+        imgtype = 'LIGHT',
+        
+        # Target information
+        ra = 16.0125, # When radec == None: do not move 
+        dec = -40.359,  
+        alt = None, # When altaz == None: do not move 
+        az = None,
+        name = f'Ra_{ra}_Dec_{dec}',
+        objtype = 'Test',
+        id_ = None,
+        note = 'Test',
+        comment = 'Test',
+        is_ToO = False,
+        
+        # Auxiliary parameters
+        force_slewing = False,
+        autofocus_use_history = False,
+        autofocus_history_duration = 60,
+        autofocus_before_start = False,
+        autofocus_when_filterchange = False,
+        autofocus_when_elapsed = False,
+        autofocus_elapsed_duration = 60,
+        observation_status = None,
+    )
+## %%

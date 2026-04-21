@@ -11,7 +11,6 @@ from tcspy.devices.safetymonitor import mainSafetyMonitor
 from tcspy.utils.error import *
 from tcspy.devices.mount import mainMount_Alpaca
 from tcspy.devices.mount import mainMount_pwi4
-from tcspy.devices.switch import mainSwitch
 from tcspy.utils.logger import mainLogger
 import json
 from astropy.time import Time
@@ -211,5 +210,5 @@ class SingleTelescope(mainConfig):
 
 # %%
 if __name__ == '__main__':
-    S = SingleTelescope(36)
+    self = SingleTelescope(36)
 # %%

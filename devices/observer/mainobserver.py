@@ -446,17 +446,4 @@ class mainObserver(mainConfig):
 if __name__ == '__main__':
     import astropy.units as u
     obs = mainObserver()
-    start = Time('2023-01-01')
-    settime = []
-    risetime = []
-    for i in range(365):
-        tonight = obs.tonight(start + i * u.day)
-        risetime.append(tonight[1].isot)
-        settime.append(tonight[0].isot)
-    from astropy.table import Table
-    tbl = Table()
-    tbl['rt'] = risetime
-    tbl['st'] = settime
-    from datetime import datetime
-    import matplotlib.pyplot as plt
-    hourlist = []
+# %%

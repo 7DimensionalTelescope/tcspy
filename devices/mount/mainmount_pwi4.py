@@ -569,3 +569,6 @@ class mainMount_pwi4(mainConfig):
     def wait_idle(self):
         self.is_idle.wait()
 # %%
+if __name__ == '__main__':
+    self = mainMount_pwi4(unitnum=36)
+# %%

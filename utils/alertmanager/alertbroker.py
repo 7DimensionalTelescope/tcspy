@@ -19,7 +19,7 @@ class AlertBroker(mainConfig):
         super().__init__()
         self.googlesheet = None
         self.gmail = None
-        self.DB_Daily = None
+        self.DB_dynamic = None
         self.slack = None
 
     # Setting up the connectors
@@ -52,9 +52,9 @@ class AlertBroker(mainConfig):
                                         user_token_path = self.config['GMAIL_TOKENPATH'])
             
     def _set_DB(self):
-        if not self.DB_Daily:
+        if not self.DB_dynamic:
             print('Setting up DatabaseConnector...')
-            self.DB_Daily = DB().Daily   
+            self.DB_dynamic = DB().Daily   
     
     def is_history_saved(self,
                          history_path : str):
@@ -832,7 +832,7 @@ class AlertBroker(mainConfig):
         formatted_data.sort('priority')
         self._set_DB()  
         try:
-            self.DB_Daily.insert(target_tbl = formatted_data)
+            self.DB_dynamic.insert(target_tbl = formatted_data)
             alert.is_inputted = True
             alert.update_time = Time.now().isot
             print(f'Targets are inserted to the database.')

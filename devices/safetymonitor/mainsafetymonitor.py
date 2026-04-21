@@ -5,7 +5,7 @@ import astropy.units as u
 import time
 import os
 import glob
-import re
+import re 
 import numpy as np
 import json
 from datetime import datetime
@@ -226,8 +226,6 @@ class mainSafetyMonitor(mainConfig):
 # %%
 if __name__ == '__main__':
     safe = mainSafetyMonitor()
-    #safe.connect()
     safe.get_status()
-    #safe.run(abort_action = Event())
 
 # %%

@@ -56,7 +56,7 @@ class mainFilterwheel(mainConfig):
         self.is_idle.set()
         self.device_lock = Lock()
         self.filtnames = self._get_all_filt_names()
-        self.offsets = self._get_all_filt_offset()
+        # self.offsets = self._get_all_filt_offset()
         self._log = mainLogger(unitnum = unitnum, logger_name = __name__+str(unitnum)).log()
 
     def get_status(self) -> dict:
@@ -97,10 +97,10 @@ class mainFilterwheel(mainConfig):
                 status['filter_'] = filtinfo['name']
             except:
                 pass
-            try:
-                status['offset'] = filtinfo['offset']
-            except:
-                pass
+            # try:
+            #     status['offset'] = filtinfo['offset']
+            # except:
+            #     pass
             try:
                 status['is_connected'] = self.device.Connected
             except:
@@ -287,5 +287,11 @@ class mainFilterwheel(mainConfig):
     def _get_current_filtinfo(self) -> str:
         position = self.device.Position
         filtname = self._position_to_filtname(position = position)
-        return dict( position = position, name = self.filtnames[position], offset = self.offsets[filtname]['offset'])
+        return dict( position = position, name = self.filtnames[position])#, offset = self.offsets[filtname]['offset'])
     
+
+# %%
+if __name__ == '__main__':
+    self = mainFilterwheel(unitnum = 36)
+    
+# %%

@@ -14,7 +14,7 @@ import threading
 import json
 from astropy.time import Time
 import shutil
-from tcspy.utils.databases import DB_Daily
+from tcspy.utils.databases import DB_Dynamic
 
 #%%
 
@@ -24,7 +24,7 @@ class AlertMonitor(mainConfig):
         super().__init__()
         self.alertbroker = AlertBroker()
         self.alert_queue = queue.Queue()
-        self.DB_daily = DB_Daily(Time.now())
+        self.DB_dynamic = DB_Dynamic(Time.now())
         self.active_alerts = {}
 
     def monitor_alert(self, 
@@ -154,7 +154,7 @@ class AlertMonitor(mainConfig):
         print(f"[{datetime.datetime.now()}] Monitoring alert status for observability.")
         alert_targets = alert.formatted_data
         alert_observable_targets = alert_targets[alert_targets['is_observable'].astype(str) == 'True']
-        DB_status_path = os.path.join(self.config['DB_STATUSPATH'], f'DB_Daily.{self.config["DB_STATUSFORMAT"]}')
+        DB_status_path = os.path.join(self.config['DB_STATUSPATH'], f'DB_Dynamic.{self.config["DB_STATUSFORMAT"]}')
         observation_status = Table.read(DB_status_path, format=self.config['DB_STATUSFORMAT'])
         alert_observation_status = observation_status[np.isin(observation_status['id'], alert_observable_targets['id'])]
         
@@ -165,7 +165,7 @@ class AlertMonitor(mainConfig):
 
         while maximum_waiting_time > 0:
             time.sleep(15)
-            observation_status = self.DB_daily.data
+            observation_status = self.DB_dynamic.data
             #observation_status = Table.read(DB_status_path, format=self.config['DB_STATUSFORMAT'])
             alert_observation_status = observation_status[np.isin(observation_status['id'], alert_observable_targets['id'])]
             is_observed_each_target = [status.lower() == 'observed' for status in alert_observation_status['status']]

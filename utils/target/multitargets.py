@@ -139,10 +139,10 @@ class MultiTargets(mainConfig):
             else:
                 # Find index where observability False to True
                 risedate_index = np.where(np.diff(target_observability.astype(int)) == 1)[0] + 1
-                risedate = date_array[risedate_index[0]]
+                risedate = date_array[risedate_index[0]] if len(risedate_index) > 0 else date_array[0]
                 # Find index where observability True to False
                 setdate_index = np.where(np.diff(target_observability.astype(int)) == -1)[0] + 1
-                setdate = date_array[setdate_index[0]]
+                setdate = date_array[setdate_index[0]] if len(setdate_index) > 0 else date_array[-1]
                 bestdate = date_array[np.argmax(target_altitude)]
             all_observability.append((risedate, bestdate, setdate))
         

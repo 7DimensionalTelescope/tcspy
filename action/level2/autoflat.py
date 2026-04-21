@@ -351,3 +351,9 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
         self.is_running = False
         raise AbortionException(f'[{type(self).__name__}] is aborted.')
         
+# %%
+if __name__ == '__main__':
+    tel = SingleTelescope(36)
+    self = AutoFlat(tel, Event())
+    self.run(count = 10, gain = 25, binning = 1)
+# %%

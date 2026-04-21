@@ -421,3 +421,8 @@ class AutoFocus(Interface_Runnable, Interface_Abortable, mainConfig):
         self.shared_memory['is_running'] = False
         self.is_running = False
         raise AbortionException(f'[{type(self).__name__}] is aborted.')
+# %%
+if __name__ == '__main__':
+    self = AutoFocus(SingleTelescope(36), Event())
+    self.run()
+# %%

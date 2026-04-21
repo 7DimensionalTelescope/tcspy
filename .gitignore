@@ -8,3 +8,6 @@
 
 # Other tools
 .codegpt/
+
+# text
+*safemonitor*.txt

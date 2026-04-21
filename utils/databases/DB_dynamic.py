@@ -17,9 +17,9 @@ from tqdm import tqdm
 import os
 # %%
 
-class DB_Daily(mainConfig):
+class DB_Dynamic(mainConfig):
     """
-    class of Daily target table for the observation of each night.
+    class of Dynamic target table for the observation of each night.
 
     Parameters
     ----------
@@ -67,7 +67,7 @@ class DB_Daily(mainConfig):
     
     def __init__(self,
                  utctime : Time = Time.now(),
-                 tbl_name : str = 'Daily'):
+                 tbl_name : str = 'Dynamic'):
 
         super().__init__()       
         self.observer = mainObserver()
@@ -260,17 +260,17 @@ class DB_Daily(mainConfig):
                             id_value = id_value,
                             id_key = id_key)
     
-    def from_RIS(self,
+    def from_TOS(self,
                  utcdate : Time = Time.now(),
-                 size : int = 300,
+                 size : int = 100,
                  observable_minimum_hour : float = 2,
                  n_time_grid : float = 10,
                  ):
         from tcspy.utils.databases import DB_Annual
-        RIS = DB_Annual(tbl_name = 'RIS')
-        best_targets = RIS.select_best_targets(utcdate = utcdate, size = size, observable_minimum_hour = observable_minimum_hour, n_time_grid = n_time_grid)
+        TOS = DB_Annual(tbl_name = 'TOS')
+        best_targets = TOS.select_best_targets(utcdate = utcdate, size = size, observable_minimum_hour = observable_minimum_hour, n_time_grid = n_time_grid)
         self.insert(best_targets)
-        print(f'{len(best_targets)} RIS targets are inserted')
+        print(f'{len(best_targets)} TOS targets are inserted')
         
     def from_IMS(self):
         from tcspy.utils.databases import DB_Annual
@@ -285,8 +285,8 @@ class DB_Daily(mainConfig):
                             update_RIS : bool = True,
                             update_IMS : bool = True,
                             update_WFS : bool = False):
-        daily_tbl = self.data
-        obs_tbl = daily_tbl[daily_tbl['status'] == 'observed']
+        dynamic_tbl = self.data
+        obs_tbl = dynamic_tbl[dynamic_tbl['status'] == 'observed']
         from tcspy.utils.databases import DB_Annual
         DB_annual = DB_Annual()
         
@@ -403,16 +403,16 @@ class DB_Daily(mainConfig):
                 dt_ut = Time.now().datetime     
                 if not os.path.exists(self.config['DB_HISTORYPATH']):
                     os.makedirs(self.config['DB_HISTORYPATH'], exist_ok = True) 
-                file_abspath =  os.path.join(self.config['DB_HISTORYPATH'], f'Daily_%.4d%.2d%.2d.{self.config["DB_HISTORYFORMAT"]}' % (dt_ut.year, dt_ut.month, dt_ut.day))
+                file_abspath =  os.path.join(self.config['DB_HISTORYPATH'], f'Dynamic_%.4d%.2d%.2d.{self.config["DB_HISTORYFORMAT"]}' % (dt_ut.year, dt_ut.month, dt_ut.day))
                 tbl.write(file_abspath, format = self.config['DB_HISTORYFORMAT'], overwrite = True)
-                print(f"Exported Daily table to {file_abspath}")
+                print(f"Exported Dynamic table to {file_abspath}")
 
             elif save_type.lower() == 'status':
                 if not os.path.exists(self.config['DB_STATUSPATH']):
                     os.makedirs(self.config['DB_STATUSPATH'], exist_ok = True)
-                file_abspath = os.path.join(self.config['DB_STATUSPATH'], f'DB_Daily.{self.config["DB_STATUSFORMAT"]}')
+                file_abspath = os.path.join(self.config['DB_STATUSPATH'], f'DB_Dynamic.{self.config["DB_STATUSFORMAT"]}')
                 tbl.write(file_abspath, format= self.config['DB_STATUSFORMAT'], overwrite=True)
-                print(f"Exported Daily table to {file_abspath}")
+                print(f"Exported Dynamic table to {file_abspath}")
             
             else:
                 raise ValueError(f"Invalid save_type: {save_type}")
@@ -544,7 +544,7 @@ class DB_Daily(mainConfig):
         '''
         all_coords = multitargets.coordinate
         moon_coord = SkyCoord(ra =self.obsinfo.moon_radec.ra.value, dec = self.obsinfo.moon_radec.dec.value, unit = 'deg')
-        moonsep = np.array(SkyCoord.separation(all_coords, moon_coord).value).round(2)
+        moonsep = np.array(all_coords.separation(moon_coord).value).round(2)
         return moonsep        
         
     def _get_risetime(self,
@@ -602,79 +602,5 @@ class DB_Daily(mainConfig):
 
 # %%
 if __name__ == '__main__':
-    Daily = DB_Daily(Time.now())
-    Daily.update_7DS_obscount(remove = True, update_RIS = True, update_IMS = True)
-    Daily.clear(clear_only_7ds= True, clear_only_observed = False)
-    Daily.from_IMS()
-    Daily.from_RIS(size = 100)
-    # #from astropy.io import ascii
-    # #tbl = ascii.read('/data2/obsdata/DB_history/Daily_20241107.ascii_fixed_width', format = 'fixed_width')
-    # #tbl_input = tbl[tbl['note'] == 'GW190814']
-    # #tbl_input['ntelescope'] = 10
-    # #Daily.insert(tbl_input)
-
-    from tcspy.utils.databases import DB_Annual
-    # from astropy.io import ascii
-    # tbl = ascii.read('./S240422ed.ascii')
-    #RIS = DB_Annual('RIS').data
-    # data = Daily.data
-    #Daily.from_GSheet('20250208_235342_GECKO')
-    Daily.from_GSheet('WASP121b_monitoring')
-
-    # tbl_to_insert = RIS[np.isin(RIS['objname'],tbl['id'])]
-    # tbl_to_insert['filter_'][:] = 'r'
-    # tbl_to_insert['obsmode'] = tbl_to_insert['obsmode'].astype('U20')
-    # tbl_to_insert['obsmode'][:] = 'Search'
-    # tbl_to_insert['exptime'][:] = 120
-    # tbl_to_insert['count'][:] = 3
-    
-    # tbl_to_insert['ntelescope'][:] = 1
-    # tbl_to_insert['priority'][:] = 40
-    #Daily.insert(tbl_to_insert)
-    # tbl_to_insert = RIS[[1637,
-    # 1753,
-    # 1872,
-    # 1873,
-    # 3259,
-    # 3260,
-    # 3418,
-    # 3580,
-    # 3581,
-    # 7756,
-    # 7757,
-    # 7983,
-    # 7984,
-    # 8212,
-    # 8213]]
-    # notelist = []
-    # for i in range(4):
-    #     notelist.append('FRB010312A')
-    # for i in range(5):
-    #     notelist.append('4hr')
-    # for i in range(6):
-    #     notelist.append('Antlia')
-    
-    # from tcspy.utils.databases.tiles import Tiles
-    # from astropy.io import ascii
-    # tbl = ascii.read('./Subset_White_Dwarfs_with_Matched_Tiles.csv')
-    # T = Tiles()
-    # list_ra = tbl['ra']
-    # list_dec = tbl['dec']
-    # tbl_filtered, tbl_idx, fig_path = T.find_overlapping_tiles(list_ra, list_dec, list_aperture = 0, visualize=True, visualize_ncols=5, visualize_savepath='./output', match_tolerance_minutes=4, fraction_overlap_lower= 0.1 )
-
-    # tbl_to_insert = RIS[[9545, 3265, 3120, 7304, 7988, 13500, 10395, 1268, 4198, 10014 ]]
-    # tbl_to_insert['obsmode'] = 'Sepc'
-    # tbl_to_insert['exptime'] = '60,60,60,100,100,100,100'
-    # tbl_to_insert['specmode'] = ['calspec]*len(tbl_to_insert)
-    # tbl_to_insert['priority'] = 15
-    # tbl_to_insert['note'] = tbl['name']
-    # Daily.insert(tbl_to_insert)
-
-    # tbl_to_insert = RIS[[21177]]
-    # tbl_to_insert['note'] = 'EP241223a'
-    # Daily.insert(tbl_to_insert)
-    
-    #Daily.initialize(True)
-    #Daily.write()
-
+    self = DB_Dynamic(Time.now())
 # %%

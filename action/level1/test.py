@@ -6,12 +6,12 @@ from tcspy.action.level2 import *
 from tcspy.devices import   SingleTelescope
 from multiprocessing import Event
 #%%
-tel = SingleTelescope(21)
+tel = SingleTelescope(36)
 abort_action = Event()
 #%%
 ChangeFilter(tel, abort_action).run('r')
 # %%
-ChangeFocus(tel, abort_action).run(31000)
+ChangeFocus(tel, abort_action).run(29500)
 # %%
 Connect(tel, abort_action).run()
 # %%
@@ -25,9 +25,9 @@ FansOff(tel, abort_action).run()
 # %%
 FansOn(tel, abort_action).run()
 # %%
-SlewAltAz(tel, abort_action).run(alt = 45, az = 180)
+SlewAltAz(tel, abort_action).run(alt = 60, az = 180)
 # %%
-SlewRADec(tel, abort_action).run(ra = 300, dec = -50)
+SlewRADec(tel, abort_action).run(ra = 100, dec = -80)
 # %%
 TrackingOff(tel, abort_action).run()
 # %%

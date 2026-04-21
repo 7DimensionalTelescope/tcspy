@@ -354,6 +354,6 @@ class mainFocuser_NINA(mainConfig):
 
 # %%
 if __name__ == '__main__':
-    F = mainFocuser_NINA(1)
-    F.autofocus_start(Event())
+    self = mainFocuser_NINA(36)
+    # F.autofocus_start(Event())
 # %%

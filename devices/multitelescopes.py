@@ -212,6 +212,6 @@ class MultiTelescopes(mainConfig):
 # %%
 
 if __name__ == '__main__':
-    M = MultiTelescopes()
+    self = MultiTelescopes()
     
 # %%

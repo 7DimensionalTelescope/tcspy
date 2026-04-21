@@ -12,10 +12,9 @@ from astropy.coordinates import SkyCoord
 import numpy as np
 from astroplan import observability_table
 from astroplan import AltitudeConstraint, MoonSeparationConstraint
-import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from astropy.io import ascii
-
 # %%
 
 class DB_Annual(mainConfig):
@@ -142,7 +141,11 @@ class DB_Annual(mainConfig):
                                 binning = target['binning'], 
                                 obsmode = target['obsmode'],
                                 ntelescope = target['ntelescope'])
-                exposureinfo_listdict.append(S.exposure_info)
+                exposure_dict = S.exposure_info.copy()
+                exposure_dict.pop('specmode_filter')
+                exposure_dict.pop('colormode_filter')
+                exposureinfo_listdict.append(exposure_dict)
+
             except:
                 exposureinfo_listdict.append(dict(status = 'error'))
 
@@ -395,82 +398,75 @@ class DB_Annual(mainConfig):
 # %%
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    db = DB_Annual(tbl_name = 'RIS')
-    #tbl = db.select_best_targets()
-    current_obscount = len(db.data[db.data['obs_count']>  0])
-    tot_tilecount = len(db.data)
-    print('Current_obscount = ', current_obscount)
-    print('Total_obscount_sum = ', np.sum(db.data['obs_count']))
-    print(f'{current_obscount}/{tot_tilecount}')
-
+    self = DB_Annual()
 # %%
-if __name__ == '__main__':
-    import numpy as np
-    import matplotlib.pyplot as plt
+# if __name__ == '__main__':
+#     import numpy as np
+#     import matplotlib.pyplot as plt
         
-    survey_data = db.data
-    all_coords = SkyCoord(survey_data['RA'], survey_data['De'], unit ='deg', frame = 'icrs')
-    # galactic latitude cut
-    highb_idx = np.abs(all_coords.galactic.b.value) > 20
-    # declination cut
-    decl_idx = (all_coords.dec.value < -20) & (all_coords.dec.value > -90)
-    # all cut
-    total_idx1 = highb_idx# & decl_idx
-    total_idx2 = highb_idx & decl_idx
+#     survey_data = db.data
+#     all_coords = SkyCoord(survey_data['RA'], survey_data['De'], unit ='deg', frame = 'icrs')
+#     # galactic latitude cut
+#     highb_idx = np.abs(all_coords.galactic.b.value) > 20
+#     # declination cut
+#     decl_idx = (all_coords.dec.value < -20) & (all_coords.dec.value > -90)
+#     # all cut
+#     total_idx1 = highb_idx# & decl_idx
+#     total_idx2 = highb_idx & decl_idx
 
-    survey_tbl = survey_data[total_idx1]
-    survey_tbl2 = survey_data[total_idx2]
+#     survey_tbl = survey_data[total_idx1]
+#     survey_tbl2 = survey_data[total_idx2]
 
     
-    all_data = db.data
-    obs_data = all_data[all_data['obs_count'] > 0]
-    high_data = all_data[all_data['obs_count'] > 3]
-    intense_data = all_data[all_data['obs_count'] > 10]
-    tonight_data = db.select_best_targets(size = 100)
+#     all_data = db.data
+#     obs_data = all_data[all_data['obs_count'] > 0]
+#     high_data = all_data[all_data['obs_count'] > 3]
+#     intense_data = all_data[all_data['obs_count'] > 10]
+#     tonight_data = db.select_best_targets(size = 100)
 
 
-    # Convert RA to radians and shift to [-180, 180] range
-    def convert_ra(ra):
-        return np.radians((ra + 180) % 360 - 180)
+#     # Convert RA to radians and shift to [-180, 180] range
+#     def convert_ra(ra):
+#         return np.radians((ra + 180) % 360 - 180)
 
-    # Convert Dec to radians
-    def convert_dec(dec):
-        return np.radians(dec)
+#     # Convert Dec to radians
+#     def convert_dec(dec):
+#         return np.radians(dec)
 
-    plt.figure(figsize=(10, 5), dpi=300)
-    ax = plt.subplot(111, projection="mollweide")
+#     plt.figure(figsize=(10, 5), dpi=300)
+#     ax = plt.subplot(111, projection="mollweide")
 
-    # Convert RA and Dec for plotting
-    all_ra = convert_ra(survey_tbl['RA'])
-    all_dec = convert_dec(survey_tbl['De'])
-    survey_ra = convert_ra(survey_tbl2['RA'])
-    survey_dec = convert_dec(survey_tbl2['De'])
+#     # Convert RA and Dec for plotting
+#     all_ra = convert_ra(survey_tbl['RA'])
+#     all_dec = convert_dec(survey_tbl['De'])
+#     survey_ra = convert_ra(survey_tbl2['RA'])
+#     survey_dec = convert_dec(survey_tbl2['De'])
 
-    obs_ra = convert_ra(obs_data['RA'])
-    obs_dec = convert_dec(obs_data['De'])
+#     obs_ra = convert_ra(obs_data['RA'])
+#     obs_dec = convert_dec(obs_data['De'])
 
-    high_ra = convert_ra(high_data['RA'])
-    high_dec = convert_dec(high_data['De'])
+#     high_ra = convert_ra(high_data['RA'])
+#     high_dec = convert_dec(high_data['De'])
 
-    intense_ra = convert_ra(intense_data['RA'])
-    intense_dec = convert_dec(intense_data['De'])
+#     intense_ra = convert_ra(intense_data['RA'])
+#     intense_dec = convert_dec(intense_data['De'])
     
-    tonight_ra = convert_ra(tonight_data['RA'])
-    tonight_dec = convert_dec(tonight_data['De'])
+#     tonight_ra = convert_ra(tonight_data['RA'])
+#     tonight_dec = convert_dec(tonight_data['De'])
 
-    # Plot data
-    ax.scatter(all_ra, all_dec, s=1, c='k', alpha=0.2, label="|l| > 20")
-    ax.scatter(survey_ra, survey_dec, s=1, c='k', alpha=0.3, label="|l| > 20 & Decl < -20")
-    ax.scatter(obs_ra, obs_dec, s=1, c='r', alpha=0.5, label="Observed")
-    ax.scatter(high_ra, high_dec, s=5, c='orange', alpha=0.5, label="N_obs >3")
-    ax.scatter(intense_ra, intense_dec, s=10, c='r', alpha=1.0, label="N_obs >10")
-    #ax.scatter(tonight_ra, tonight_dec, s=1, c='b', alpha=1, label="Tonight scheduled")
+#     # Plot data
+#     ax.scatter(all_ra, all_dec, s=1, c='k', alpha=0.2, label="|l| > 20")
+#     ax.scatter(survey_ra, survey_dec, s=1, c='k', alpha=0.3, label="|l| > 20 & Decl < -20")
+#     ax.scatter(obs_ra, obs_dec, s=1, c='r', alpha=0.5, label="Observed")
+#     ax.scatter(high_ra, high_dec, s=5, c='orange', alpha=0.5, label="N_obs >3")
+#     ax.scatter(intense_ra, intense_dec, s=10, c='r', alpha=1.0, label="N_obs >10")
+#     #ax.scatter(tonight_ra, tonight_dec, s=1, c='b', alpha=1, label="Tonight scheduled")
 
-    # Labels and grid
-    ax.set_xticklabels(['14h', '16h', '18h', '20h', '22h', '0h', '2h', '4h', '6h', '8h', '10h'])
-    ax.grid(True)
-    plt.legend()
-    plt.title(f"7DT RIS Observations on {Time.now().datetime.strftime('%Y-%m-%d')}")
-    plt.show()
+#     # Labels and grid
+#     ax.set_xticklabels(['14h', '16h', '18h', '20h', '22h', '0h', '2h', '4h', '6h', '8h', '10h'])
+#     ax.grid(True)
+#     plt.legend()
+#     plt.title(f"7DT RIS Observations on {Time.now().datetime.strftime('%Y-%m-%d')}")
+#     plt.show()
 
-# %%
+# # %%

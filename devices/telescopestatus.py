@@ -200,6 +200,5 @@ class TelescopeStatus(Interface):
 
 # %%
 if __name__ == '__main__':
-    t = TelescopeStatus(SingleTelescope(2))
-    t.weather
+    self = TelescopeStatus(SingleTelescope(36))
 # %%
