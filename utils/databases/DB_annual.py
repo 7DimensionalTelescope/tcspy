@@ -19,7 +19,7 @@ from astropy.io import ascii
 
 class DB_Annual(mainConfig):
     """
-    A class representing data from the RIS database.
+    A class representing data from the TOS database.
 
     Parameters
     ----------
@@ -57,14 +57,14 @@ class DB_Annual(mainConfig):
     	Initializes the target table to update.
     select_best_targets()
     	Select the best observable targets for observation.
-    to_Daily()
+    to_Dynamic()
     	Inserts rows to the 'Daily' table.
     update_targets_count()
     	Update observation counts for target.
     """
     
     def __init__(self,
-                 tbl_name : str = 'RIS'):
+                 tbl_name : str = 'TOS'):
         super().__init__()       
         self.observer = mainObserver()
         self.tblname = tbl_name
@@ -130,41 +130,72 @@ class DB_Annual(mainConfig):
         
         from tcspy.utils.target import SingleTarget
         
-        # Exposure information
-        exposureinfo_listdict = []
-        for target in target_tbl_to_update:
-            try:
-                S = SingleTarget(observer = self.observer, 
-                                exptime = target['exptime'], 
-                                count = target['count'], 
-                                filter_ = target['filter_'], 
-                                binning = target['binning'], 
-                                obsmode = target['obsmode'],
-                                ntelescope = target['ntelescope'])
-                exposure_dict = S.exposure_info.copy()
-                exposure_dict.pop('specmode_filter')
-                exposure_dict.pop('colormode_filter')
-                exposureinfo_listdict.append(exposure_dict)
+        # Exposure information — compute once if all rows share identical params
+        exposure_keys = ['exptime', 'count', 'filter_', 'binning', 'obsmode', 'ntelescope']
+        first = target_tbl_to_update[0]
+        all_same_params = all(
+            all(str(row[k]) == str(first[k]) for k in exposure_keys)
+            for row in target_tbl_to_update[1:]
+        )
 
+        if all_same_params:
+            try:
+                S = SingleTarget(observer=self.observer,
+                                 exptime=first['exptime'],
+                                 count=first['count'],
+                                 filter_=first['filter_'],
+                                 binning=first['binning'],
+                                 obsmode=first['obsmode'],
+                                 ntelescope=first['ntelescope'])
+                shared_exposure = S.exposure_info.copy()
+                shared_exposure.pop('specmode_filter')
+                shared_exposure.pop('colormode_filter')
+                exposureinfo_listdict = [shared_exposure] * len(target_tbl_to_update)
             except:
-                exposureinfo_listdict.append(dict(status = 'error'))
+                exposureinfo_listdict = [dict(status='error')] * len(target_tbl_to_update)
+        else:
+            exposureinfo_listdict = []
+            for target in target_tbl_to_update:
+                try:
+                    S = SingleTarget(observer=self.observer,
+                                     exptime=target['exptime'],
+                                     count=target['count'],
+                                     filter_=target['filter_'],
+                                     binning=target['binning'],
+                                     obsmode=target['obsmode'],
+                                     ntelescope=target['ntelescope'])
+                    exposure_dict = S.exposure_info.copy()
+                    exposure_dict.pop('specmode_filter')
+                    exposure_dict.pop('colormode_filter')
+                    exposureinfo_listdict.append(exposure_dict)
+                except:
+                    exposureinfo_listdict.append(dict(status='error'))
 
         values_update_dict = [{**targetinfo_dict, **exposureinfo_dict} for targetinfo_dict, exposureinfo_dict in zip(targetinfo_listdict, exposureinfo_listdict)]
-                
-        for i, value in enumerate(tqdm(values_update_dict, desc = 'Updating DB...')):
-            target_to_update = target_tbl_to_update[i]  
-            self.sql.update_row(tbl_name = self.tblname, update_value = list(value.values()), update_key = list(value.keys()), id_value= target_to_update['id'], id_key = 'id')
-        print(f'{len(target_tbl_to_update)} targets are updated')
+
+        valid = [(i, v) for i, v in enumerate(values_update_dict) if 'status' not in v]
+        if valid:
+            valid_indices, valid_values = zip(*valid)
+            rows_for_bulk = [{**v, 'id': target_tbl_to_update[i]['id']} for i, v in zip(valid_indices, valid_values)]
+            update_keys = list(valid_values[0].keys())
+            self.sql.bulk_update_rows(tbl_name=self.tblname, update_keys=update_keys, rows_values=rows_for_bulk, id_key='id')
+        print(f'{len(valid) if valid else 0}/{len(target_tbl_to_update)} targets are updated')
     
     def select_best_targets(self,
                             utcdate : Time = Time.now(),
                             size : int = 300,
                             observable_minimum_hour: float = 2,
                             n_time_grid : float = 10,
-                            galactic_latitude_limit: float = 20,
-                            declination_upper_limit: float = -20,
-                            declination_lower_limit: float = -90
+                            galactic_latitude_limit: float = None,
+                            declination_upper_limit: float = None,
+                            declination_lower_limit: float = None
                             ):
+        if galactic_latitude_limit is None:
+            galactic_latitude_limit = self.config.get('TARGET_GALACTIC_LATITUDE_LIMIT', 0)
+        if declination_upper_limit is None:
+            declination_upper_limit = self.config.get('TARGET_DECLINATION_UPPER_LIMIT', 20)
+        if declination_lower_limit is None:
+            declination_lower_limit = self.config.get('TARGET_DECLINATION_LOWER_LIMIT', -90)
         obsnight = self.nightsession.set_obsnight(utctime = utcdate)
         observable_fraction_criteria = observable_minimum_hour / obsnight.observable_hour 
         
@@ -223,6 +254,7 @@ class DB_Annual(mainConfig):
         
             # Allocate targets across time grids
             selected_indices = []
+            best_target_group = Table()
             for i, (n_target, time) in enumerate(zip(n_target_for_each_timegrid, time_grid)):
                 # Check the altitude and moon separation for sorted targets at the current time
 
@@ -232,40 +264,38 @@ class DB_Annual(mainConfig):
 
                 # Filter targets meeting criteria
                 high_scored_idx = ((score > 0.7) &
-                                   (altaz.alt.value > self.config['TARGET_MINALT']) & 
+                                   (altaz.alt.value > self.config['TARGET_MINALT']) &
                                    (moonsep > self.config['TARGET_MOONSEP']))
-                
+
                 available_indices = np.where(high_scored_idx)[0]
                 available_indices = np.setdiff1d(available_indices, selected_indices)
 
                 # Select up to n_target targets
                 if len(available_indices) < n_target:
-                    selected_idx = available_indices             
+                    selected_idx = available_indices
                 else:
                     selected_idx = available_indices[:n_target]
-                    
+
                 n_target_for_each_timegrid[i] -= len(selected_idx)
                 selected_indices.extend(selected_idx)
-                    
+                best_target_group = target_tbl_for_scoring_sorted[list(selected_indices)]
                 if len(selected_indices) >= size:
-                    best_targets = target_tbl_for_scoring_sorted[list(selected_indices)]
-                else:
-                    best_target_group = target_tbl_for_scoring_sorted[list(selected_indices)]
+                    break
             best_targets = vstack([best_targets, best_target_group])
         # Return the selected targets
         return best_targets[:size]
 
-    def to_Daily(self,
+    def to_Dynamic(self,
                  target_tbl : Table):
         """
-        Insert targets to daily.
+        Insert targets to dynamic.
 
         Parameters
         ----------
         target_tbl : Table
         	The table containing the targets.
         """
-        self.sql.insert_rows(tbl_name = 'Daily', data = target_tbl)
+        self.sql.insert_rows(tbl_name = 'Dynamic', data = target_tbl)
     
     def update_target(self,
                      target_id : str,

@@ -14,26 +14,26 @@ class DB(mainConfig):
 
     Attributes
     ----------
-    Daily : DB_Dynamic
+    Dynamic : DB_Dynamic
         An instance of the DB_Dynamic class updated at utctime.
-    RIS : DB_Annual
+    TOS : DB_Annual
         An instance of the DB_Annual class updated at utcdate.
 
     Methods
     -------
-    update_Daily(utctime)
+    update_Dynamic(utctime)
         Returns an instance of DB_Dynamic updated at utctime.
-    update_RIS(utcdate)
+    update_TOS()
         Returns an instance of DB_Annual updated at utcdate.
     """
     
     def __init__(self,
                  utctime = Time.now()):
         super().__init__()
-        self.Daily = self.update_Daily(utctime = utctime)
-        self.RIS = self.update_RIS()
+        self.Dynamic = self.update_Dynamic(utctime = utctime)
+        self.TOS = self.update_TOS()
     
-    def update_Daily(self, utctime):
+    def update_Dynamic(self, utctime):
         """
         Returns an instance of DB_Dynamic updated at utctime.
 
@@ -47,10 +47,10 @@ class DB(mainConfig):
         DB_Dynamic
             An instance of the DB_Dynamic class updated at utctime.
         """
-        Daily = DB_Dynamic(utctime = utctime, tbl_name = 'Daily')
-        return Daily
+        Dynamic = DB_Dynamic(utctime = utctime, tbl_name = 'Dynamic')
+        return Dynamic
 
-    def update_RIS(self):
+    def update_TOS(self):
         """
         Returns an instance of DB_Annual updated at utcdate.
 
@@ -64,5 +64,5 @@ class DB(mainConfig):
         DB_Annual
             An instance of the DB_Annual class updated at utcdate.
         """
-        return DB_Annual(tbl_name = 'RIS')
+        return DB_Annual(tbl_name = 'TOS')
 # %%

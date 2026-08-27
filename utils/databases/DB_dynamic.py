@@ -15,8 +15,12 @@ from astroplan import observability_table
 from astroplan import AltitudeConstraint, MoonSeparationConstraint
 from tqdm import tqdm
 import os
-# %%
+import warnings
+from astropy.coordinates.baseframe import NonRotationTransformationWarning
 
+# Ignore the specific astropy warning globally
+warnings.filterwarnings('ignore', category=NonRotationTransformationWarning)
+# %%
 class DB_Dynamic(mainConfig):
     """
     class of Dynamic target table for the observation of each night.
@@ -128,7 +132,7 @@ class DB_Dynamic(mainConfig):
             target_tbl_to_update =  target_tbl_all[rows_to_update]
         
         if len(target_tbl_to_update) == 0:
-            return 
+            return self.data
         
         multitargets = MultiTargets(observer = self.observer,
                                    targets_ra = target_tbl_to_update['RA'],
@@ -148,33 +152,68 @@ class DB_Dynamic(mainConfig):
         moonsep = self._get_moonsep(multitargets = multitargets)
         targetinfo_listdict = [{'risetime' : rt, 'transittime' : tt, 'settime' : st, 'besttime' : bt, 'maxalt' : mt, 'moonsep': ms} for rt, tt, st, bt, mt, ms in zip(risetime.isot, transittime.isot, settime.isot, besttime.isot, maxalt, moonsep)]
 
-        # Exposure information
-        exposureinfo_listdict = []
-        for target in target_tbl_to_update:
-            try:
-                S = SingleTarget(observer = self.observer, 
-                                exptime = target['exptime'], 
-                                count = target['count'], 
-                                filter_ = target['filter_'], 
-                                binning = target['binning'], 
-                                colormode = target['colormode'],
-                                specmode = target['specmode'],
-                                obsmode = target['obsmode'],
-                                gain = target['gain'],
-                                ntelescope = target['ntelescope'])
-                exposure_info = S.exposure_info
-                del exposure_info['specmode_filter']
-                del exposure_info['colormode_filter']
-                exposureinfo_listdict.append(exposure_info)
-            except:
-                exposureinfo_listdict.append(dict(status = 'error'))
+        # Exposure information — compute once if all rows share identical params
+        exposure_keys = ['exptime', 'count', 'filter_', 'binning', 'colormode', 'specmode', 'obsmode', 'gain', 'ntelescope']
+        first = target_tbl_to_update[0]
+        all_same_params = all(
+            all(str(row[k]) == str(first[k]) for k in exposure_keys)
+            for row in target_tbl_to_update[1:]
+        )
 
-        values_update = [{**targetinfo_dict, **exposureinfo_dict} for targetinfo_dict, exposureinfo_dict in zip(targetinfo_listdict, exposureinfo_listdict)]
-                
-        for i, value in enumerate(tqdm(values_update)):
-            target_to_update = target_tbl_to_update[i]  
-            self.sql.update_row(tbl_name = self.tblname, update_value = list(value.values()), update_key = list(value.keys()), id_value= [target_to_update['id']], id_key = ['id'])
-        print(f'{len(target_tbl_to_update)} targets are updated')
+        if all_same_params:
+            try:
+                S = SingleTarget(observer=self.observer,
+                                 exptime=first['exptime'],
+                                 count=first['count'],
+                                 filter_=first['filter_'],
+                                 binning=first['binning'],
+                                 colormode=first['colormode'],
+                                 specmode=first['specmode'],
+                                 obsmode=first['obsmode'],
+                                 gain=first['gain'],
+                                 ntelescope=first['ntelescope'])
+                shared_exposure = S.exposure_info.copy()
+                shared_exposure.pop('specmode_filter')
+                shared_exposure.pop('colormode_filter')
+                exposureinfo_listdict = [shared_exposure] * len(target_tbl_to_update)
+            except Exception as e:
+                print(f'[initialize] SingleTarget failed for shared params: {e}')
+                exposureinfo_listdict = [dict(status='error')] * len(target_tbl_to_update)
+        else:
+            exposureinfo_listdict = []
+            for target in target_tbl_to_update:
+                try:
+                    S = SingleTarget(observer=self.observer,
+                                     exptime=target['exptime'],
+                                     count=target['count'],
+                                     filter_=target['filter_'],
+                                     binning=target['binning'],
+                                     colormode=target['colormode'],
+                                     specmode=target['specmode'],
+                                     obsmode=target['obsmode'],
+                                     gain=target['gain'],
+                                     ntelescope=target['ntelescope'])
+                    exposure_info = S.exposure_info.copy()
+                    exposure_info.pop('specmode_filter')
+                    exposure_info.pop('colormode_filter')
+                    exposureinfo_listdict.append(exposure_info)
+                except Exception as e:
+                    print(f'[initialize] SingleTarget failed for target {target["objname"]}: {e}')
+                    exposureinfo_listdict.append(dict(status='error'))
+
+        # Always write celestial info (settime, risetime, etc.) regardless of exposure info status
+        celestial_keys = list(targetinfo_listdict[0].keys())
+        celestial_rows = [{**targetinfo_listdict[i], 'id': target_tbl_to_update[i]['id']} for i in range(len(target_tbl_to_update))]
+        self.sql.bulk_update_rows(tbl_name=self.tblname, update_keys=celestial_keys, rows_values=celestial_rows, id_key='id')
+
+        # Also write exposure info when available
+        valid = [(i, v) for i, v in enumerate(exposureinfo_listdict) if 'status' not in v]
+        if valid:
+            valid_indices, valid_values = zip(*valid)
+            exposure_rows = [{**valid_values[j], 'id': target_tbl_to_update[valid_indices[j]]['id']} for j in range(len(valid_indices))]
+            exposure_keys = list(valid_values[0].keys())
+            self.sql.bulk_update_rows(tbl_name=self.tblname, update_keys=exposure_keys, rows_values=exposure_rows, id_key='id')
+        print(f'{len(valid) if valid else 0}/{len(target_tbl_to_update)} targets updated exposure info ({len(target_tbl_to_update)}/{len(target_tbl_to_update)} celestial info written)')
         return self.data
     
     def best_target(self,
@@ -200,7 +239,7 @@ class DB_Dynamic(mainConfig):
             target_all = self.initialize(initialize_all= False)
         else:
             target_all = self.data
-        idx_ToO = target_all['is_ToO'] == 1
+        idx_ToO = (target_all['is_ToO'] == 1) | (target_all['is_rapidToO'] == 1)
         target_ToO = target_all[idx_ToO]
         target_ordinary = target_all[~idx_ToO]
         
@@ -260,9 +299,32 @@ class DB_Dynamic(mainConfig):
                             id_value = id_value,
                             id_key = id_key)
     
+    def reset_stale_scheduled(self):
+        """
+        Resets targets stuck at status='scheduled' back to 'unscheduled'.
+
+        A row can only carry 'scheduled' while its observation is actively in
+        progress (see NightObservation.execute_observation). This is called at
+        NightObservation startup, before anything has been dispatched, so any
+        row found here is a leftover from an unclean shutdown (crash/kill) of a
+        previous run, not a real in-progress observation.
+
+        Returns
+        -------
+        list
+            objnames of the targets that were reset.
+        """
+        target_tbl = self.data
+        stale_tbl = target_tbl[target_tbl['status'] == 'scheduled']
+        if len(stale_tbl) == 0:
+            return []
+        rows_values = [{'id': row['id'], 'status': 'unscheduled', 'obs_starttime': ''} for row in stale_tbl]
+        self.sql.bulk_update_rows(tbl_name = self.tblname, update_keys = ['status', 'obs_starttime'], rows_values = rows_values, id_key = 'id')
+        return list(stale_tbl['objname'])
+
     def from_TOS(self,
                  utcdate : Time = Time.now(),
-                 size : int = 100,
+                 size : int = 500,
                  observable_minimum_hour : float = 2,
                  n_time_grid : float = 10,
                  ):
@@ -279,39 +341,48 @@ class DB_Dynamic(mainConfig):
         self.insert(best_targets)
         print(f'{len(best_targets)} IMS targets are inserted')
     
-    def update_7DS_obscount(self,
-                            remove : bool = False,
+    def update_TOS_obscount(self,
+                            remove : bool = True,
                             reset_status: bool = True,
-                            update_RIS : bool = True,
-                            update_IMS : bool = True,
-                            update_WFS : bool = False):
+                            update_TOS : bool = True):
         dynamic_tbl = self.data
         obs_tbl = dynamic_tbl[dynamic_tbl['status'] == 'observed']
         from tcspy.utils.databases import DB_Annual
         DB_annual = DB_Annual()
         
         observed_ids = []
-        update_survey_list = [tbl_name for tbl_name, do_update in zip(['RIS', 'IMS', 'WFS'],[update_RIS, update_IMS, update_WFS]) if do_update]
+        update_survey_list = [tbl_name for tbl_name, do_update in zip(['TOS'], [update_TOS]) if do_update]
         for tbl_name in update_survey_list:
             try:
                 DB_annual.change_table(tbl_name)
                 DB_data = DB_annual.data
-                obscount = 0
-                for target in obs_tbl:    
+                today_str = Time.now().isot[:10]
+                rows_for_bulk = []
+                for target in obs_tbl:
                     count_before = DB_data[DB_data['objname'] == target['objname']]['obs_count']
                     if len(count_before) == 1:
-                        today_str = Time.now().isot[:10]
-                        DB_annual.update_target(target_id = target['objname'], update_keys = ['obs_count','note','last_obsdate'], update_values = [count_before[0]+1, target['note'], today_str], id_key = 'objname')
-                        obscount +=1
+                        rows_for_bulk.append({
+                            'obs_count': count_before[0] + 1,
+                            'note': target['note'],
+                            'last_obsdate': today_str,
+                            'objname': target['objname'],
+                        })
                         observed_ids.append(target['id'])
-                print(f'{obscount} {DB_annual.tblname} tiles are updated')
+                if rows_for_bulk:
+                    DB_annual.sql.bulk_update_rows(
+                        tbl_name=tbl_name,
+                        update_keys=['obs_count', 'note', 'last_obsdate'],
+                        rows_values=rows_for_bulk,
+                        id_key='objname',
+                    )
+                print(f'{len(rows_for_bulk)} {DB_annual.tblname} tiles are updated')
             except:
                 pass
-        if reset_status:
-            for id_ in observed_ids:
-                self.update_target(update_values = ['unscheduled'], update_keys = ['status'], id_value = id_, id_key = 'id')
-        if remove:
-            self.sql.remove_rows(tbl_name = self.tblname, ids = observed_ids)
+        if reset_status and observed_ids:
+            id_list = ', '.join([f"'{id_}'" for id_ in observed_ids])
+            self.sql.execute(f"UPDATE {self.tblname} SET status = 'unscheduled' WHERE id IN ({id_list})", commit=True)
+        if remove and len(observed_ids) > 0:
+            self.sql.remove_rows(tbl_name=self.tblname, ids=observed_ids)
 
         DB_annual.disconnect()
         
@@ -335,31 +406,27 @@ class DB_Dynamic(mainConfig):
             gsheet.write_sheet(sheet_name = sheet_name, data = tbl_sheet, append = False, clear_header = False)        
     
     def clear(self, 
-            clear_only_7ds: bool = True,
+            clear_only_tos: bool = True,
             clear_only_observed: bool = False):
         """
         Clears rows from the database table based on the specified conditions.
 
         Parameters:
-            clear_only_7ds (bool): If True, only clear rows with objtype in ['RIS', 'IMS', 'WFS'].
+            clear_only_tos (bool): If True, only clear rows with objtype in ['TOS'].
             clear_only_observed (bool): If True, only clear rows with status 'observed'.
         """
         data = self.data  # Assuming `self.data` is a DataFrame or similar structure.
 
-        if clear_only_7ds and clear_only_observed:
-            # Clear rows that are both 7DS objects and observed.
+        if clear_only_tos and clear_only_observed:
+            # Clear rows that are both TOS objects and observed.
             filtered_data = data[
-                ((data['objtype'] == 'RIS') | 
-                (data['objtype'] == 'IMS') | 
-                (data['objtype'] == 'WFS')) & 
+                (data['objtype'] == 'TOS') & 
                 (data['status'] == 'observed')
             ]
-        elif clear_only_7ds:
-            # Clear only 7DS objects.
+        elif clear_only_tos:
+            # Clear only TOS objects.
             filtered_data = data[
-                (data['objtype'] == 'RIS') | 
-                (data['objtype'] == 'IMS') | 
-                (data['objtype'] == 'WFS')
+                (data['objtype'] == 'TOS')
             ]
         elif clear_only_observed:
             # Clear only observed objects.
@@ -372,7 +439,8 @@ class DB_Dynamic(mainConfig):
         all_ids = filtered_data['id']
 
         # Remove rows from the database table.
-        self.sql.remove_rows(tbl_name=self.tblname, ids=all_ids)
+        if len(all_ids) > 0:
+            self.sql.remove_rows(tbl_name=self.tblname, ids=all_ids)
     
     @property
     def data(self):
@@ -444,8 +512,11 @@ class DB_Dynamic(mainConfig):
             constraint_altitude_max = multitarget_alt < self.constraints.maxalt
             score *= constraint_altitude_max
             
-            constraint_set = (utctime + target_tbl_for_scoring['exptime_tot'].astype(float) * u.s < Time(target_tbl_for_scoring['settime'])) & (utctime + target_tbl_for_scoring['exptime_tot'].astype(float) * u.s < self.obsnight.sunrise_astro)
-            #score *= constraint_set
+            settime_col = target_tbl_for_scoring['settime']
+            _settimes_valid = all(isinstance(v, str) and v.strip() != "" and v.strip().lower() != "none" for v in settime_col)
+            if _settimes_valid:
+                constraint_set = (utctime + target_tbl_for_scoring['exptime_tot'].astype(float) * u.s < Time(settime_col)) & (utctime + target_tbl_for_scoring['exptime_tot'].astype(float) * u.s < self.obsnight.sunrise_astro)
+                #score *= constraint_set
             
             constraint_night = self.observer.is_night(utctimes = utctime)
             #score *= constraint_night
@@ -461,7 +532,10 @@ class DB_Dynamic(mainConfig):
         if len(target_tbl_for_scoring) == 0:
             return None, None
         
-        obstime_nonspecified_idx = (target_tbl_for_scoring['obs_starttime'] == None) | (target_tbl_for_scoring['obs_starttime'] == "")
+        obstime_nonspecified_idx = np.array([
+            v is None or v == "" or (isinstance(v, str) and v.strip().lower() == "none")
+            for v in target_tbl_for_scoring['obs_starttime']
+        ])
         obstime_fixed_targets = target_tbl_for_scoring[~obstime_nonspecified_idx]
         obstime_nonfixed_targets = target_tbl_for_scoring[obstime_nonspecified_idx]
          
@@ -497,7 +571,7 @@ class DB_Dynamic(mainConfig):
         weight_priority = self.config['TARGET_WEIGHT_PRIORITY'] / weight_sum
         
         multitarget_alt = np.array([0 if target_alt <= 0 else target_alt for target_alt in multitarget_alt])
-        score_relative_alt = weight_alt * np.clip(0, 1, (multitarget_alt) / (np.abs(obstime_nonfixed_targets['maxalt'])))
+        score_relative_alt = weight_alt * np.clip((multitarget_alt) / (np.abs(obstime_nonfixed_targets['maxalt'])), 0, 1)
         
         highest_priority = np.max(multitarget_priority)
         score_weight = weight_priority* (multitarget_priority / highest_priority)
@@ -596,11 +670,14 @@ class DB_Dynamic(mainConfig):
                                multitargets : MultiTargets,
                                fraction_observable : float = 0.1):
         observability_tbl = observability_table(constraints = self.constraints, observer = multitargets._astroplan_observer, targets = multitargets.coordinate , time_range = [self.obsnight.sunset_astro, self.obsnight.sunrise_astro], time_grid_resolution = 20 * u.minute)
-        obs_tbl['fraction_obs'] = ['%.2f'%fraction for fraction in observability_tbl['fraction of time observable']]
         key = observability_tbl['fraction of time observable'] > fraction_observable
-        obs_tbl = obs_tbl[key]
+        obs_tbl = observability_tbl[key]
+        return obs_tbl
 
 # %%
 if __name__ == '__main__':
     self = DB_Dynamic(Time.now())
+    self.update_TOS_obscount()
+    self.clear()
+    self.from_TOS()
 # %%

@@ -16,7 +16,7 @@ class Tiles:
     def __init__(self, tile_path: str = None):
         if tile_path is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            self.tile_path = os.path.join(current_dir, './tileinfo/7-DT/final_tiles.txt')
+            self.tile_path = os.path.join(current_dir, './tileinfo/RASA36/final_tiles.txt')
         else:
             self.tile_path = tile_path
         self.tbl_RIS = None
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     #list_ra = data['ra']
     #list_dec = data['dec']
     list_ra = [260.03428]#tbl['ra']#[350.1]
-    list_dec = [-60.15669]#bl['dec']
+    list_dec = [-.15669]#bl['dec']
     
     #tbl_filtered, tbl_idx, fig_path =T.find_overlapping_tiles(list_ra, list_dec, 0.5, visualize = False, visualize_ncols=5, match_tolerance_minutes= 11)  
     tbl_filtered, tbl_idx, fig_path = T.find_overlapping_tiles(list_ra, list_dec, list_aperture = 0, visualize=True, visualize_ncols=5, visualize_savepath='./output', match_tolerance_minutes=4, fraction_overlap_lower= 0.1 )

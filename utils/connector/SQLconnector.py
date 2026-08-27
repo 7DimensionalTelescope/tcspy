@@ -140,6 +140,22 @@ class SQLConnector:
         id_list = ', '.join([f"'{id_}'" for id_ in ids])
         self.execute(f"DELETE FROM {tbl_name} WHERE id IN ({id_list})", commit=True)
 
+    def execute_many(self, sql_command, params_list, commit=False):
+        conn = self.connect()
+        cursor = conn.cursor(buffered=True)
+        try:
+            cursor.executemany(sql_command, params_list)
+            if commit:
+                conn.commit()
+            return True
+        except Error as e:
+            conn.rollback()
+            print(f"Error: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
     def insert_rows(self, tbl_name: str, data: Table):
         data_str = data.copy()
         for colname in data_str.columns:
@@ -147,16 +163,42 @@ class SQLConnector:
         if 'idx' in data_str.keys():
             data_str.remove_column('idx')
 
-        common_colnames = [col for col in data_str.colnames if col in self.get_colnames(tbl_name)]
+        db_colnames = self.get_colnames(tbl_name)
+        missing = [col for col in data_str.colnames if col not in db_colnames and col != 'idx']
+        for col in missing:
+            print(f"Adding missing column '{col}' to {tbl_name}...")
+            self.execute(f"ALTER TABLE {tbl_name} ADD COLUMN `{col}` VARCHAR(255)", commit=True)
+        if missing:
+            db_colnames = self.get_colnames(tbl_name)
+        common_colnames = [col for col in data_str.colnames if col in db_colnames]
         placeholders = ', '.join(['%s'] * len(common_colnames))
         sql_command = f"INSERT INTO {tbl_name} (`{'`, `'.join(common_colnames)}`) VALUES ({placeholders})"
         values = [tuple(row[col] if row[col] != ('None' and '') else None for col in common_colnames) for row in data_str]
 
-        insertion_results = []
-        for value in values:
-            cursor = self.execute(sql_command, value, commit=True)
-            insertion_results.append(cursor is not None)
-        return insertion_results
+        result = self.execute_many(sql_command, values, commit=True)
+        return [result is not None] * len(values)
+
+    def bulk_update_rows(self, tbl_name: str, update_keys: list, rows_values: list, id_key: str = 'id'):
+        """Update multiple rows in one executemany call instead of one round-trip per row."""
+        def convert_value(val):
+            if isinstance(val, (np.integer, np.int64)):
+                return int(val)
+            elif isinstance(val, (np.floating, np.float64)):
+                return float(val)
+            return val
+
+        update_command = ', '.join([f"{key} = %s" for key in update_keys])
+        sql_command = f"UPDATE {tbl_name} SET {update_command} WHERE {id_key} = %s"
+
+        params_list = []
+        for row in rows_values:
+            values = tuple(
+                None if row[k] in ('None', '') else convert_value(row[k])
+                for k in update_keys
+            )
+            params_list.append(values + (row[id_key],))
+
+        return self.execute_many(sql_command, params_list, commit=True)
 
     def update_row(self, tbl_name: str, update_value: list or str, update_key: list or str, id_value: list or str, id_key: list or str = ['id']):
         def convert_value(val):
@@ -223,8 +265,9 @@ class SQLConnector:
             values_to_update = values_all[rows_to_update]
         uuidlist = [uuid.uuid4().hex for _ in range(len(values_to_update))]
 
-        for id_, index in zip(uuidlist, values_to_update['idx']):
-            self.update_row(tbl_name=tbl_name, update_value=id_, update_key='id', id_value=str(index), id_key='idx')
+        params_list = [(uid, str(idx)) for uid, idx in zip(uuidlist, values_to_update['idx'])]
+        sql_command = f"UPDATE {tbl_name} SET id = %s WHERE idx = %s"
+        self.execute_many(sql_command, params_list, commit=True)
   
     def pool_status(self):
         """Check the status of the connection pool"""
