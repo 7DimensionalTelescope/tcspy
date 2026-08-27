@@ -55,7 +55,8 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
         self.shared_memory['succeeded'] = False
         self.shared_memory['status'] = dict()
         self.shared_memory['exception'] = None
-        self.shared_memory['is_running'] = True
+        self.shared_memory['exception_message'] = None
+        self.shared_memory['is_running'] = False
         self.is_running = False
 
     def run(self, 
@@ -67,7 +68,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
             specmode : str = None,
             colormode : str = None,
             ntelescope : int = 1,
-            gain : int = 2750,
+            gain : int = 16,
             binning : str = '1',
             imgtype : str = 'Light',
             
@@ -81,7 +82,8 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
             id_: str = None,
             note : str = None,
             comment : str = None,
-            is_ToO : bool = False,
+            is_ToO: bool = False,
+            is_rapidToO : bool = False,
             
             # Auxiliary parameters
             force_slewing : bool = False,
@@ -167,11 +169,11 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
         
         # Check condition of the instruments for this Action
         trigger_abort_disconnected = False
-        try:        
+        try:
             status_mount = self.telescope_status.mount
-        except:
+        except Exception:
             trigger_abort_disconnected = True
-            self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: mount status cannot be loaded.')
+            self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: mount status cannot be loaded.', exc_info=True)
         try:
             status_camera = self.telescope_status.camera
         except Exception as e:
@@ -212,6 +214,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                               note = note,
                               comment = comment,
                               is_ToO = is_ToO,
+                              is_rapidToO = is_rapidToO,
                               
                               exptime = exptime,
                               count = count,
@@ -234,9 +237,10 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                     exposure_info['filter_'] = exposure_info['specmode_filter'][self.telescope.tel_name]
                 else:
                     exposure_info['filter_'] = exposure_info['colormode_filter'][self.telescope.tel_name]
-            except:
-                self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: filter is not defined.')
+            except Exception:
+                self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: filter is not defined.', exc_info=True)
                 self.shared_memory['exception'] = 'ActionFailedException'
+                self.shared_memory['exception_message'] = 'filter is not defined'
                 self.shared_memory['is_running'] = False
                 self.is_running = False
                 raise ActionFailedException(f'[{type(self).__name__}] is failed: filter is not defined.')
@@ -263,6 +267,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
             except ActionFailedException:
                 self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: slewing failure.')
                 self.shared_memory['exception'] = 'ActionFailedException'
+                self.shared_memory['exception_message'] = 'slewing failure (RA/Dec)'
                 self.shared_memory['is_running'] = False
                 self.is_running = False
                 raise ActionFailedException(f'[{type(self).__name__}] is failed: slewing failure.')
@@ -281,7 +286,6 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                 raise ConnectionException(f'[{type(self).__name__}] is failed: telescope is disconnected.')
             except AbortionException:
                 while action_slew.shared_memory['is_running']:
-                    print(action_slew.shared_memory['is_running'])
                     time.sleep(0.1)
                 self.telescope.log.warning(f'==========LV2[{type(self).__name__}] is aborted: slewing is aborted.')
                 self.shared_memory['exception'] = 'AbortionException'
@@ -291,12 +295,14 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
             except ActionFailedException:
                 self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: slewing failure.')
                 self.shared_memory['exception'] = 'ActionFailedException'
+                self.shared_memory['exception_message'] = 'slewing failure (Alt/Az)'
                 self.shared_memory['is_running'] = False
                 self.is_running = False
                 raise ActionFailedException(f'[{type(self).__name__}] is failed: slewing failure.')
         else:
             self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: Coordinate type of the target : {target.status["coordtype"]} is not defined')
             self.shared_memory['exception'] = 'ActionFailedException'
+            self.shared_memory['exception_message'] = f'unknown coordinate type: {target.status["coordtype"]}'
             self.shared_memory['is_running'] = False
             self.is_running = False
             raise ActionFailedException(f'[{type(self).__name__}] is failed: Coordinate type of the target : {target.status["coordtype"]} is not defined')
@@ -381,6 +387,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                 except ActionFailedException:
                     self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: Focuser movement failure.')
                     self.shared_memory['exception'] = 'ActionFailedException'
+                    self.shared_memory['exception_message'] = 'focuser movement failure'
                     self.shared_memory['is_running'] = False
                     self.is_running = False
                     raise ActionFailedException(f'[{type(self).__name__}] is failed: Focuser movement failure.')
@@ -406,6 +413,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                 except ActionFailedException:
                     self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: Filterwheel movement failure.')
                     self.shared_memory['exception'] = 'ActionFailedException'
+                    self.shared_memory['exception_message'] = 'filterwheel movement failure'
                     self.shared_memory['is_running'] = False
                     self.is_running = False
                     raise ActionFailedException(f'[{type(self).__name__}] is failed: Filterwheel movement failure.')
@@ -440,7 +448,7 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                 if autofocus_when_elapsed:
                     history = action_autofocus.history[filter_]
                     now = Time.now()
-                    if ((Time(history['update_time']) + autofocus_elapsed_duration * u.minute) < now) | (not history['succeeded']):
+                    if ((Time(history['update_time']) + autofocus_elapsed_duration * u.minute) < now) or (not history['succeeded']):
                         try:
                             result_autofocus = action_autofocus.run(filter_ = filter_, use_offset = False, use_history = False)
                         except ConnectionException:
@@ -483,7 +491,8 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                                                           id_ = id_,
                                                           note = note,
                                                           comment = comment,
-                                                          is_ToO = is_ToO)
+                                                          is_ToO = is_ToO,
+                                                          is_rapidToO = is_rapidToO)
 
                     # Update self.observation_status
                     observation_status[filter_]['observed'] += 1
@@ -506,16 +515,18 @@ class SingleObservation(Interface_Runnable, Interface_Abortable):
                 except ActionFailedException:
                     self.telescope.log.critical(f'==========LV2[{type(self).__name__}] is failed: exposure failure.')
                     self.shared_memory['exception'] = 'ActionFailedException'
+                    self.shared_memory['exception_message'] = f'exposure failure (filter: {filter_})'
                     self.shared_memory['is_running'] = False
                     self.is_running = False
                     raise ActionFailedException(f'[{type(self).__name__}] is failed: exposure failure.')
 
         self.telescope.log.info(f'==========LV2[{type(self).__name__}] is finished')
-        self.shared_memory['succeeded'] = all(result_all_exposure)
+        succeeded = bool(result_all_exposure) and all(result_all_exposure)
+        self.shared_memory['succeeded'] = succeeded
         self.shared_memory['is_running'] = False
         self.is_running = False
-        
-        return all(result_all_exposure)
+
+        return succeeded
 
     def abort(self):
         self.telescope.register_logfile()
@@ -591,7 +602,7 @@ if __name__ == '__main__':
             specmode = None,
             colormode = None,
             ntelescope = 1,
-            gain = 25,
+            gain = 16,
             binning = '1',
             imgtype = 'LIGHT',
             
@@ -605,7 +616,7 @@ if __name__ == '__main__':
             id_ = None,
             note = 'Test',
             comment = 'Test',
-            is_ToO = False,
+            is_rapidToO = False,
             
             # Auxiliary parameters
             force_slewing = False,
@@ -630,7 +641,7 @@ if __name__ == '__main__':
         specmode = None,
         colormode = None,
         ntelescope = 1,
-        gain = 25,
+        gain = 16,
         binning = '1',
         imgtype = 'LIGHT',
         
@@ -644,7 +655,7 @@ if __name__ == '__main__':
         id_ = None,
         note = 'Test',
         comment = 'Test',
-        is_ToO = False,
+        is_rapidToO = False,
         
         # Auxiliary parameters
         force_slewing = False,

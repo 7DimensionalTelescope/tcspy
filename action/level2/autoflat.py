@@ -163,8 +163,8 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
                 self.shared_memory['is_running'] = False
                 self.is_running = False
                 raise AbortionException(f'[{type(self).__name__}] is aborted: Exposure is aborted')
-            except:
-                self.telescope.log.warning(f'==========LV2[{type(self).__name__}] is failed.')
+            except Exception:
+                self.telescope.log.warning(f'==========LV2[{type(self).__name__}] is failed.', exc_info=True)
                 self.shared_memory['exception'] = 'ActionFailedException'
                 self.shared_memory['is_running'] = False
                 self.is_running = False
@@ -226,10 +226,11 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
                                                   is_light = True,
                                                   gain = gain,
                                                   abort_action = self.abort_action)
-                        sky_level = float(np.mean(imginfo['data']) ) - bias_level
-                        sky_level_acceleration = np.abs(sky_level_per_second_this - sky_level_per_second_this)
-                        sky_level_per_second_this = sky_level/exptime 
-                        sky_level_per_second_expected = sky_level_per_second_this + sky_level_acceleration
+                        sky_level = float(np.median(imginfo['data'])) - bias_level
+                        sky_level_per_second_prev = sky_level_per_second_this
+                        sky_level_per_second_this = sky_level / exptime
+                        sky_level_ratio = (sky_level_per_second_this / sky_level_per_second_prev) if sky_level_per_second_prev > 0 else 1.0
+                        sky_level_per_second_expected = sky_level_per_second_this * sky_level_ratio
                         self.telescope.log.info(f'[{type(self).__name__}] Sky level: {sky_level} with {exptime}s exposure')
                     except ExposureFailedException:
                         self.telescope.log.critical(f'=====[{type(self).__name__}] is failed: camera exposure failure.')
@@ -237,8 +238,8 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
                     except AbortionException:
                         self.telescope.log.warning(f'=====[{type(self).__name__}] is aborted.')
                         raise AbortionException(f'[{type(self).__name__}] is aborted.')
-                    except:
-                        self.telescope.log.warning(f'=====[{type(self).__name__}] is failed.')
+                    except Exception:
+                        self.telescope.log.warning(f'=====[{type(self).__name__}] is failed.', exc_info=True)
                         raise ActionFailedException(f'[{type(self).__name__}] is failed: Sky level calculation failure')
                 else:
                     self.telescope.log.critical(f'=====[{type(self).__name__}] is failed: camera is under unknown condition.')
@@ -257,6 +258,7 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
                                           note = None,
                                           comment = None,
                                           is_ToO = False,
+                                          is_rapidToO = False,
                                         
                                           exptime = exptime,
                                           count = 1,
@@ -284,8 +286,8 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
                         self.telescope.log.info(f'[{type(self).__name__}] Image saved: %s'%(filepath))
                         obs_count += 1
 
-                    except:
-                        self.telescope.log.critical(f'=====[{type(self).__name__}] is failed: mainImage save failure.')
+                    except Exception:
+                        self.telescope.log.critical(f'=====[{type(self).__name__}] is failed: mainImage save failure.', exc_info=True)
                         raise ActionFailedException(f'[{type(self).__name__}] is failed: mainImage save failure.')
                 
                 # Abort action when triggered
@@ -355,5 +357,5 @@ class AutoFlat(Interface_Runnable, Interface_Abortable):
 if __name__ == '__main__':
     tel = SingleTelescope(36)
     self = AutoFlat(tel, Event())
-    self.run(count = 10, gain = 25, binning = 1)
+    self.run(count = 10, gain = 16, binning = 1)
 # %%

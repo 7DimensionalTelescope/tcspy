@@ -79,13 +79,15 @@ class MultiAction:
         self.abort_action.clear()
         for process in self.multiprocess.values():
             process.start()
-        is_running = self.status.values()
-        #is_finished = {telescope.tel_name: self.shared_memory[telescope.tel_name]['succeeded'] for telescope, kwargs in zip(self.array_telescope, self.array_kwargs)}
-        while any(is_running):
+        while True:
             is_running = self.status.values()
-            #is_finished = {telescope.tel_name: self.shared_memory[telescope.tel_name]['succeeded'] for telescope, kwargs in zip(self.array_telescope, self.array_kwargs)}
-            time.sleep(0.1) ########################
+            if not any(is_running):
+                break
+            time.sleep(0.1)
             if self.abort_action.is_set():
+                for process in self.multiprocess.values():
+                    if process.is_alive():
+                        process.terminate()
                 raise AbortionException(f'[{type(self).__name__}] is aborted.')
         
         # After running all processes, check succeeded or not
