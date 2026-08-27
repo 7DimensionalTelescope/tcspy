@@ -122,6 +122,7 @@ class SingleTarget(mainConfig):
                  note : str = None,
                  comment : str = None,
                  is_ToO : bool = False,
+                 is_rapidToO : bool = False,
                  
                  # Exposure information
                  exptime : float or str = None,
@@ -154,6 +155,7 @@ class SingleTarget(mainConfig):
         self.note = note
         self.comment = comment
         self.is_ToO = is_ToO
+        self.is_rapidToO = is_rapidToO
         
         
         if (not isinstance(alt, type(None))) & (not isinstance(az, type(None))):
@@ -253,7 +255,8 @@ class SingleTarget(mainConfig):
             exposureinfo['binning'] = format_exposure['binning']
             exposureinfo['exptime_tot'] = format_exposure['exptime_tot']
         
-        if self.specmode and self.specmode.upper() != 'NONE':
+        obsmode_lower = self.obsmode.lower() if self.obsmode else ''
+        if obsmode_lower == 'spec' and self.specmode and self.specmode.upper() != 'NONE':
             filter_info = self._get_filters_from_specmode()
             filter_str = list(filter_info.values())[0]
             format_exposure = self._format_expinfo(filter_str = str(filter_str),
@@ -265,9 +268,9 @@ class SingleTarget(mainConfig):
             exposureinfo['filter_'] = exposureinfo['filter_']
             exposureinfo['binning'] = format_exposure['binning']
             exposureinfo['exptime_tot'] = format_exposure['exptime_tot']
-            exposureinfo['specmode_filter'] = filter_info    
-        
-        if self.colormode and self.colormode.upper() != 'NONE':
+            exposureinfo['specmode_filter'] = filter_info
+
+        if obsmode_lower in ('color', 'deep') and self.colormode and self.colormode.upper() != 'NONE':
             filter_info = self._get_filters_from_colormode()
             filter_str = list(filter_info.values())[0]
             format_exposure = self._format_expinfo(filter_str = str(filter_str),
@@ -279,7 +282,7 @@ class SingleTarget(mainConfig):
             exposureinfo['filter_'] = exposureinfo['filter_']
             exposureinfo['binning'] = format_exposure['binning']
             exposureinfo['exptime_tot'] = format_exposure['exptime_tot']
-            exposureinfo['colormode_filter'] = filter_info   
+            exposureinfo['colormode_filter'] = filter_info
         return exposureinfo
     
     @property
@@ -323,6 +326,7 @@ class SingleTarget(mainConfig):
         targetinfo['note'] = self.note
         targetinfo['comment'] = self.comment
         targetinfo['is_ToO'] = self.is_ToO
+        targetinfo['is_rapidToO'] = self.is_rapidToO
         
         if self._coordtype == 'altaz':
             targetinfo['alt'] = self.alt

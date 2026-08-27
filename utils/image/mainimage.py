@@ -132,7 +132,24 @@ class mainImage(mainConfig):
         filename = self._format_filename()
         foldername = self._format_foldername()
         
-        if self.hdu.header['IS_ToO'].upper() == 'TRUE':
+        if (self.hdu.header['is_rapidToO'].upper() == 'TRUE') or (self.hdu.header['is_ToO'].upper() == 'TRUE'):
+            # Include the ToO target name so each ToO target gets its own folder/tar.
+            # This lets the data-transfer notification be matched to the correct ToO alert thread.
+            # For tile-matched targets the real ToO target name is stored in NOTE
+            # (OBJECT holds the tile id), so prefer NOTE and fall back to OBJECT.
+            too_name = str(self.hdu.header.get('NOTE', '') or '').strip()
+            if too_name.lower() in ('', 'none', 'nan'):
+                too_name = str(self.hdu.header.get('OBJECT', '') or '').strip()
+            too_name = too_name.replace(' ', '_')
+            if too_name:
+                foldername += '_%s' % too_name
+            # Disambiguate independent dispatches of the same target (e.g. two
+            # rapid-ToO triggers minutes apart) with a short suffix from the
+            # target's unique row id (OBJCTID), so they don't collide into one
+            # folder/tar and get archived/reported as a single observation.
+            too_id = str(self.hdu.header.get('OBJCTID', '') or '').strip()
+            if too_id and too_id.lower() not in ('none', 'nan'):
+                foldername += '_%s' % too_id[:8]
             foldername += '_ToO'
         if not os.path.isdir(os.path.join(self._configinfo['IMAGE_PATH'], foldername)):
             os.makedirs(os.path.join(self._configinfo['IMAGE_PATH'], foldername))
@@ -412,7 +429,8 @@ class mainImage(mainConfig):
         info['SPECMODE'] = None
         info['NTELSCOP'] = None
         info['NOTE'] = None
-        info['IS_ToO'] = None
+        info['is_ToO'] = None
+        info['is_rapidToO'] = None
         if self._targetinfo:
             info['OBJECT'] = self._format_header(self._targetinfo['name'], 'Name of the target')            
             info['OBJTYPE'] = self._format_header(self._targetinfo['objtype'], 'Type of the target')
@@ -430,7 +448,9 @@ class mainImage(mainConfig):
             info['NTELSCOP'] = self._format_header(self._targetinfo['ntelescope'], 'Number of telescopes involved in the observation')
             info['NOTE'] = self._format_header(self._targetinfo['note'], 'Note of the target')
             is_ToO_str = str(True) if self._targetinfo['is_ToO'] else str(False)
-            info['IS_ToO'] = self._format_header(is_ToO_str, 'Is the target a ToO?')
+            info['is_ToO'] = self._format_header(is_ToO_str, 'Is the target a ToO?')
+            is_rapidToO_str = str(True) if self._targetinfo['is_rapidToO'] else str(False)
+            info['is_rapidToO'] = self._format_header(is_rapidToO_str, 'Is the target a rapid ToO?')
         return info
 
 

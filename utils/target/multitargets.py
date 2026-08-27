@@ -8,6 +8,7 @@ from astropy.time import Time
 import numpy as np
 import datetime
 from typing import List
+from tqdm import tqdm
 # TCSpy modules
 from tcspy.devices.observer import mainObserver
 from tcspy.configuration import mainConfig
@@ -110,16 +111,16 @@ class MultiTargets(mainConfig):
         expanded_arrays_observability = []
         expanded_arrays_altitude_midnight = []
         expanded_arrays_date = []
-        current_date = start_date
-        while current_date <= end_date:
-            print(f"Calculating observability of the {len(self.coordinate)} targets on {current_date.strftime('%Y-%m-%d')}")
-            midnight = Time((self._observer.tonight(current_date)[0].jd + self._observer.tonight(current_date)[1].jd )/2, format = 'jd')
+        n_days = int((end_date - start_date).to(u.day).value) + 1
+        date_range = (start_date + i * u.day for i in range(n_days))
+        for current_date in tqdm(date_range, total=n_days, desc='Calculating observability'):
+            tonight_times = self._observer.tonight(current_date)
+            midnight = Time((tonight_times[0].jd + tonight_times[1].jd) / 2, format='jd')
             alt_at_midnight = self.altaz(midnight).alt.value
             expanded_arrays_altitude_midnight.append(alt_at_midnight)
-            observablity = self.is_ever_observable(current_date, None, time_grid_resolution= time_grid_resolution * u.hour)
+            observablity = self.is_ever_observable(tonight_times[0], tonight_times[1], time_grid_resolution=time_grid_resolution * u.hour)
             expanded_arrays_observability.append(observablity)
             expanded_arrays_date.append(current_date.datetime)
-            current_date += 1 * u.day
 
         observablity_array = np.array(expanded_arrays_observability).T
         altitude_array = np.array(expanded_arrays_altitude_midnight).T

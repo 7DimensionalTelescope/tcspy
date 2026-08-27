@@ -7,15 +7,19 @@ from astropy.time import Time
 class NightSession(mainConfig):
     
     def __init__(self,
-                 utctime : Time = Time.now()):
+                 utctime : Time = None):
         super().__init__()
+        if utctime is None:
+            utctime = Time.now()
         self.utctime = utctime
         self.observer = mainObserver()
         self.obsnight_utc = self.set_obsnight(utctime)
         self.obsnight_ltc = self.convert_obsnight_ltc()
 
     def set_obsnight(self,
-                     utctime : Time = Time.now()):
+                     utctime : Time = None):
+        if utctime is None:
+            utctime = Time.now()
         class obsnight: 
             def __repr__(self):
                 attrs = {name: value.iso if isinstance(value, Time) else value

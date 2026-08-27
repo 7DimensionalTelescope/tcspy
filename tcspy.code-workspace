@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../RASA36"
+		},
+		{
+			"path": "../pipeline"
+		}
+	],
+	"settings": {}
+}
