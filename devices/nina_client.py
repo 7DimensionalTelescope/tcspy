@@ -150,12 +150,12 @@ class NINA:
 
             if not result.get('Success', False):
                 error_msg = result.get('Error', 'Unknown error')
-                raise Exception(f"API error: {error_msg}")
+                raise Exception(f"NINA API error: {error_msg}")
 
             return result
 
         except HTTPError as e:
-            error_message = f"HTTP {e.code}"
+            error_message = f"NINA error: HTTP {e.code}"
             try:
                 error_body = json.loads(e.read().decode('utf-8'))
                 error_message = error_body.get('Error', error_message)

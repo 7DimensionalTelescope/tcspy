@@ -16,7 +16,6 @@ import json
 from astropy.time import Time
 import portalocker
 #%%
-
 class SingleTelescope(mainConfig):
     """
     A class representing a single telescope setup.
@@ -211,4 +210,38 @@ class SingleTelescope(mainConfig):
 # %%
 if __name__ == '__main__':
     self = SingleTelescope(36)
+
+    from tcspy.action.level2 import SingleObservation
+    kwargs = {
+        'exptime': 30,
+        'count': 1,
+        'obsmode': 'Single',
+        'filter_': 'r',
+        'specmode': None,
+        'colormode': None,
+        'ntelescope': 1,
+        'gain': 25,
+        'binning': '1',
+        'imgtype': 'Light',
+        'ra': None,
+        'dec': None,
+        'alt': 30,
+        'az': 180,
+        'name': None,
+        'objtype': None,
+        'id_': None,
+        'note': None,
+        'comment': None,
+        'is_ToO': False,
+        'is_rapidToO':True
+    }
+
+    from multiprocessing import Event
+    event= Event()
+    action = SingleObservation(self, event)
+    if __name__ == '__main__':
+        from multiprocessing import Process
+        thread = Process(target=action.run, kwargs=kwargs)
+        thread.start()
+
 # %%

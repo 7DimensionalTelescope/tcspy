@@ -45,8 +45,6 @@ class mainFocuser_NINA(mainConfig):
         Turn off the fans (not supported via NINA).
     autofocus_start(abort_action: Event) -> bool
         Start autofocus.
-    autofocus_stop() -> None
-        Stop autofocus.
     abort() -> None
         Abort the movement of the Focuser device.
     """
@@ -195,9 +193,9 @@ class mainFocuser_NINA(mainConfig):
                     status =  self.get_status()
                     current_position = status['position']
                     time.sleep(float(self.config['FOCUSER_CHECKTIME']))
-                    if abort_action.is_set():
-                        self._log.warning('Abort requested during focuser move')
-                        raise AbortionException('Focuser movement is aborted')
+                    # if abort_action.is_set():
+                    #     self._log.warning('Abort requested during focuser move')
+                    #     raise AbortionException('Focuser movement is aborted')
                 time.sleep(3 * float (self.config['FOCUSER_CHECKTIME']))
                 status =  self.get_status()
                 current_position = status['position']
@@ -276,18 +274,18 @@ class mainFocuser_NINA(mainConfig):
             while not af_complete:
                 time.sleep(checktime)
 
-                if abort_action.is_set():
-                    self.device.autofocus_stop()
-                    self._is_autofocusing = False
-                    status = self.get_status()
-                    while status['is_moving']:
-                        status =  self.get_status()
-                        time.sleep(checktime)
-                    self._log.warning('Autofocus is aborted. Move back to the previous position')
-                    self.device_lock.release()
-                    self.move(position = current_position, abort_action= Event())
-                    self.device_lock.acquire()
-                    raise AbortionException('Autofocus is aborted. Move back to the previous position')
+                # if abort_action.is_set():
+                #     # self.device.autofocus_stop()
+                #     self._is_autofocusing = False
+                #     status = self.get_status()
+                #     while status['is_moving']:
+                #         status =  self.get_status()
+                #         time.sleep(checktime)
+                    # self._log.warning('Autofocus is aborted. Move back to the previous position')
+                #     self.device_lock.release()
+                #     self.move(position = current_position, abort_action= Event())
+                #     self.device_lock.acquire()
+                #     raise AbortionException('Autofocus is aborted. Move back to the previous position')
 
                 current_af_timestamp = self._get_last_af_timestamp()
                 if current_af_timestamp != prev_af_timestamp and current_af_timestamp != '':
@@ -312,7 +310,7 @@ class mainFocuser_NINA(mainConfig):
 
                 if time.time() - start_time > max_total_time:
                     self._log.warning('Autofocus timed out after %d seconds'%(max_total_time))
-                    self.device.autofocus_stop()
+                    # self.device.autofocus_stop()
                     time.sleep(checktime)
                     break
 
