@@ -92,7 +92,7 @@ class mainConfig:
         camera_params = dict(CAMERA_HOSTIP= ip_address,
                              CAMERA_PORTNUM=portnum,
                              CAMERA_DEVICENUM=0,
-                             CAMERA_PIXSIZE=3.76,  # micron
+                             CAMERA_PIXSIZE=9,  # micron
                              CAMERA_CHECKTIME=0.5)
                              
         filterwheel_params = dict(FTWHEEL_HOSTIP= ip_address,
@@ -101,7 +101,7 @@ class mainConfig:
                                   FTWHEEL_CHECKTIME=0.5,
                                   FTWHEEL_OFFSETFILE =f"{os.path.join(savepath_unit,'filter.offset')}")
 
-        focuser_params = dict(FOCUSER_DEVICETYPE='PWI4',  # Alpaca or PWI4
+        focuser_params = dict(FOCUSER_DEVICETYPE='NINA',  # Alpaca or PWI4
                               FOCUSER_HOSTIP= ip_address,
                               FOCUSER_PORTNUM='8220',
                               FOCUSER_DEVICENUM=0,
@@ -122,7 +122,7 @@ class mainConfig:
                                OBSERVER_LATITUDE= -30.4704,
                                OBSERVER_ELEVATION= 1580,
                                OBSERVER_TIMEZONE= 'America/Santiago',
-                               OBSERVER_NAME='Hyeonho Choi'
+                               OBSERVER_NAME='YoungPyo Hong'
                                )
         
         image_params = dict(FOLDERNAME_FORMAT = "$$UTCDATE12-$$_gain$$GAIN$$",
@@ -196,8 +196,8 @@ class mainConfig:
                             )
         
         slack_params = dict(SLACK_TOKEN = os.path.join(self.path_home, '.tcspy', f'slack/slack_token_7dt_obseration_alert.txt'),
-                            SLACK_DEFAULT_CHANNEL = 'C07SREPTWFM',
-                            SLACK_ALERT_CHANNEL = 'C07SREPTWFM')
+                            SLACK_DEFAULT_CHANNEL = 'C0AUD37DQG5',
+                            SLACK_ALERT_CHANNEL = 'C0AUD37DQG5')
         
         googlesheet_params = dict(GOOGLESHEET_URL = 'https://docs.google.com/spreadsheets/d/1UorU7P_UMr22Luw6q6GLQYk4-YicGRATwCePRxkx2Ms/edit#gid=0',
                                   GOOGLESHEET_AUTH = os.path.join(self.path_home, '.tcspy', f'googlesheet/targetdb-423908-ee7bb8c14ff3.json'),
