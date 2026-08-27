@@ -198,16 +198,22 @@ class MultiTelescopes(mainConfig):
         return all_logs_dict
 
     def _all_logs(self):
-        class log: 
-            def info(message):
+        class log:
+            def info(message, *args, **kwargs):
                 for log_unit in self.log_dict.values():
-                    log_unit.info(message)
-            def warning(message):
+                    log_unit.info(message, *args, **kwargs)
+            def warning(message, *args, **kwargs):
                 for log_unit in self.log_dict.values():
-                    log_unit.warning(message)
-            def critical(message):
+                    log_unit.warning(message, *args, **kwargs)
+            def error(message, *args, **kwargs):
                 for log_unit in self.log_dict.values():
-                    log_unit.critical(message)
+                    log_unit.error(message, *args, **kwargs)
+            def critical(message, *args, **kwargs):
+                for log_unit in self.log_dict.values():
+                    log_unit.critical(message, *args, **kwargs)
+            def debug(message, *args, **kwargs):
+                for log_unit in self.log_dict.values():
+                    log_unit.debug(message, *args, **kwargs)
         return log
 # %%
 

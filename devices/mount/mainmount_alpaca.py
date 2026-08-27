@@ -268,11 +268,10 @@ class mainMount_Alpaca(mainConfig):
         self._log.info('Slewing to the coordinate (RA = %.3f, Dec = %.3f, Alt = %.1f, Az = %.1f)' %(ra, dec, altaz.alt.deg, altaz.az.deg))
 
         # Check coordinates
-        if force_action:
-            self._log.warning('Forced slewing: Destination altitude below limit (%.1fdeg)' %altaz.alt.deg)
-
-        else:
-            if altaz.alt.deg < self._min_altitude:
+        if altaz.alt.deg < self._min_altitude:
+            if force_action:
+                self._log.warning('Forced slewing: Destination altitude below limit (%.1fdeg)' %altaz.alt.deg)
+            else:
                 self._log.critical('Destination altitude below limit (%.1fdeg)' %altaz.alt.deg)
                 raise SlewingFailedException('Destination altitude below limit (%.1fdeg)' %altaz.alt.deg)
         
@@ -336,11 +335,10 @@ class mainMount_Alpaca(mainConfig):
         self._log.info('Slewing to the coordinate (Alt = %.1f, Az = %.1f)' %(alt, az))
 
         # Check coordinates
-        if force_action:
-            self._log.warning('Forced slewing: Destination altitude below limit (%.1fdeg)' %alt)
-        
-        else:
-            if alt < self._min_altitude:
+        if alt < self._min_altitude:
+            if force_action:
+                self._log.warning('Forced slewing: Destination altitude below limit (%.1fdeg)' %alt)
+            else:
                 self._log.critical('Destination altitude below limit (%.1fdeg)' %alt)
                 raise SlewingFailedException('Destination altitude below limit (%.1fdeg)' %alt)
         

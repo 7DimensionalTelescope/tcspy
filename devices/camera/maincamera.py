@@ -380,14 +380,16 @@ class mainCamera(mainConfig):
 
         # except Exception as e:
         #     exception_raised = e
-        
-        # finally:
-        #     self.device_lock.release()
-        #     self.is_idle.set()
-        #     if exception_raised:
-        #         raise exception_raised
+
+        try:
+            pass  # not implemented; uncomment try/except above when new camera is ready
+        finally:
+            self.device_lock.release()
+            self.is_idle.set()
+            if exception_raised:
+                raise exception_raised
         return True
-            
+
     def warm(self,
              abort_action : Event,
              settemperature : float = 10,
@@ -460,13 +462,16 @@ class mainCamera(mainConfig):
 
         # except Exception as e:
         #     exception_raised = e
-        
-        # finally:
-        #     self.device_lock.release()
-        #     self.is_idle.set()
-        #     if exception_raised:
-        #         raise exception_raised
+
+        try:
+            pass  # not implemented; uncomment try/except above when new camera is ready
+        finally:
+            self.device_lock.release()
+            self.is_idle.set()
+            if exception_raised:
+                raise exception_raised
         return True
+
     def exposure(self,
                  abort_action : Event,
                  exptime : float,
@@ -504,15 +509,23 @@ class mainCamera(mainConfig):
         imginfo : dict
             A dictionary containing information about the captured image.
         """
+        self._log.info(f"Exposure started with parameters: exptime={exptime}, imgtype={imgtype}, binning={binning}, is_light={is_light}, gain={gain}")
         self.is_idle.clear()
+        
+        self._log.info("Acquiring device lock...")
         self.device_lock.acquire()
         exception_raised = None
         
         try:
+            start_time = time.time()
+            timeout_limit = exptime + 60.0
+            
             # Set Gain
+            self._log.info(f"Setting gain to {gain}")
             self._update_gain(gain = gain)
             
-            # Set binning 
+            # Set binning
+            self._log.info(f'Setting binning to {binning}')
             self._set_binning(binning = binning)
             self.imgtype = imgtype.upper()
 
@@ -526,6 +539,7 @@ class mainCamera(mainConfig):
                 raise ExposureFailedException(f'Type "{imgtype}" is not set as imagetype')
             
             # Exposure
+            self._log.info('Start exposure...')
             self.device.StartExposure(Duration = exptime, Light = is_light)
             # When Image is already ready, flush the camera memory. For BIAS image, it takes 0.25sec to be ready with C361k
             if self.device.ImageReady:
@@ -535,7 +549,6 @@ class mainCamera(mainConfig):
                 self._log.warning('Camera memory is flushed')
                 self.device.StartExposure(Duration = exptime, Light = is_light)
             
-            self._log.info('Start exposure...')
             while not self.device.ImageReady:
                 time.sleep(float(self.config['CAMERA_CHECKTIME']))
                 
@@ -543,6 +556,11 @@ class mainCamera(mainConfig):
                     self.device.AbortExposure()
                     self._log.warning('Camera exposure is aborted')
                     raise AbortionException('Camera exposure is aborted')
+
+                if (time.time() - start_time) > timeout_limit:
+                    self.device.AbortExposure()
+                    self._log.critical(f'Exposure timeout: ImageReady not True after {timeout_limit} seconds.')
+                    raise ExposureFailedException('Camera exposure timed out.')
                 
             # **Check abort before retrieving the image** 
             if abort_action.is_set():
@@ -595,6 +613,7 @@ class mainCamera(mainConfig):
         self.device.BinX = self.device.BinY = binning
         self.device.NumX = self.device.CameraXSize // self.device.BinX
         self.device.NumY = self.device.CameraYSize // self.device.BinY
+        self._log.info(f'Binning set to {binning}')
 
 # %%
 if __name__ == '__main__':

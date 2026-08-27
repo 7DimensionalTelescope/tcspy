@@ -24,11 +24,13 @@ class FlatAcquisition(mainConfig):
         self.multitelescopes = multitelescopes
         self.abort_action = abort_action
         self.is_running = False
-        
+        self.succeeded = False
+        self.failure_reason = ''
+
     def run(self,
             count : int = 9,
             binning : int = 1,
-            gain : int = 2750
+            gain : int = 16
             ):
         """
         Starts the startup process in a separate thread.
@@ -71,25 +73,30 @@ class FlatAcquisition(mainConfig):
             for tel_name, result in self.shared_memory.items():
                 is_succeeded = self.shared_memory[tel_name]['succeeded']
                 status_filter = self.shared_memory[tel_name]['status']
+                exception_info = self.shared_memory[tel_name].get('exception', None)
                 false_filters = [key for key, value in status_filter.items() if value is False]
                 if is_succeeded:
                     self.multitelescopes.log_dict[tel_name].info(f'[{type(self).__name__}] is finished')
                 else:
-                    self.multitelescopes.log_dict[tel_name].info(f'[{type(self).__name__}] is failed: {false_filters}')
+                    reason = false_filters if false_filters else exception_info
+                    self.failure_reason += f'AutoFlat[{tel_name}]:{reason}; '
+                    self.multitelescopes.log_dict[tel_name].warning(f'[{type(self).__name__}] is failed: {reason}')
             self.multitelescopes.log.critical(f'[{type(self).__name__}] is failed.')
+            self.multitelescopes.update_statusfile(status='idle', do_trigger=True)
             self.is_running = False
             raise ActionFailedException(f'[{type(self).__name__}] is failed.')    
 
         self.multitelescopes.log.info(f'[{type(self).__name__}] is finished.')
         self.multitelescopes.update_statusfile(status = 'idle', do_trigger = True)
+        self.succeeded = True
         self.is_running = False
 
 
 # %%
 if __name__ == '__main__':
-    M = MultiTelescopes((SingleTelescope[36]))
+    M = MultiTelescopes()
     abort_action = Event()
     application = FlatAcquisition(M, abort_action)
-
+    application.run()
 
 # %%

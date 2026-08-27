@@ -162,7 +162,7 @@ if __name__ == '__main__':
     obsnight = NightSession(Time.now()).obsnight_utc
     tonight_str = '%.4d-%.2d-%.2d'%(obsnight.sunrise_civil.datetime.year, obsnight.sunrise_civil.datetime.month, obsnight.sunrise_civil.datetime.day)
     #message_ts = None
-    message_ts = slack.get_message_ts(match_string = f'7DT Observation on {tonight_str}')
+    message_ts = slack.get_message_ts(match_string = f'{application.config["SYSTEM_NAME"]} Observation on {tonight_str}')
     if message_ts:
         slack.post_thread_message(message_ts,f'{type(application).__name__} is triggered: {time.strftime("%H:%M:%S", time.localtime())}')
     result= application.run(exptime = 100)
