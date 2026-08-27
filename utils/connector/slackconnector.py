@@ -8,8 +8,8 @@ import os
 class SlackConnector:
     
     def __init__(self,
-                 token_path: str = f'{os.path.expanduser("~")}/.config/slack/slack_token_7dt_obseration_alert.txt',
-                 default_channel_id: str = 'C07SREPTWFM'):
+                 token_path: str = f'{os.path.expanduser("~")}/configuration/keys/slack_token.txt',
+                 default_channel_id: str = 'C0AUD37DQG5'):
         token = open(token_path, 'r').read()
         self.client = WebClient(token=token)
         self.channel_id = default_channel_id
@@ -80,6 +80,17 @@ class SlackConnector:
         )
         print(f'Thread message posted: text = {text}, blocks = {blocks}')
         return result
+
+    def upload_file_to_thread(self, file_path: str, thread_ts: str, title: str = None):
+        """Upload a file as a reply to an existing Slack thread."""
+        if self.channel_id is None:
+            raise ValueError("Channel is not selected")
+        self.client.files_upload_v2(
+            channel=self.channel_id,
+            file=file_path,
+            title=title or os.path.basename(file_path),
+            thread_ts=thread_ts
+        )
 
     def post_message(self, text = None, blocks = None):
         """

@@ -41,23 +41,25 @@ class Alert:
     @property
     def default_config(self):
         default_config = dict()
-        default_config['exptime'] = 100
-        default_config['count'] = 3
-        default_config['obsmode'] = 'Spec'
-        default_config['filter_'] = 'g'
-        default_config['specmode'] = 'specall'
-        default_config['ntelescope'] = 10
+        default_config['exptime'] = 60
+        default_config['count'] = 5
+        default_config['obsmode'] = 'Single'
+        default_config['filter_'] = 'r'
+        default_config['colormode'] = 'None'
+        default_config['specmode'] = 'None'
+        default_config['ntelescope'] = 1
         default_config['priority'] = 50
         default_config['weight'] = 1
         default_config['binning'] = 1
-        default_config['gain'] = 2750
+        default_config['gain'] = 25
         default_config['objtype'] = 'Request'
-        default_config['is_ToO'] = 0
+        default_config['is_ToO'] = 1
+        default_config['is_rapidToO'] = 0
         default_config['id'] = self.key
-        
+
         return default_config
     
-    def _match_RIS_tile(self, ra : list or str, dec : list or str, match_tolerance_minutes = 3):
+    def _match_TOS_tile(self, ra : list or str, dec : list or str, match_tolerance_minutes = 3):
         if not self._tiles:
             self._tiles = Tiles(tile_path = None)
         if not isinstance(ra, list):
@@ -67,71 +69,71 @@ class Alert:
         tile, matched_indices, _ = self._tiles.find_overlapping_tiles(ra, dec, visualize = False, match_tolerance_minutes= match_tolerance_minutes)
         return tile, matched_indices
 
-    def _check_visibility(self, ra : list, dec : list) -> List[bool]:
+    def _check_visibility(self, ra : list, dec : list, time_grid_minutes : float = 10) -> List[bool]:
         print('Checking visibility...')
         nightsession = NightSession()
         night_start = nightsession.obsnight_utc.sunset_astro
         night_end = nightsession.obsnight_utc.sunrise_astro
         M = MultiTargets(targets_ra = np.array(ra), targets_dec = np.array(dec))
-        is_observable = M.is_ever_observable(utctime_start = night_start, utctime_end = night_end, time_grid_resolution = 10 * u.minute)
+        is_observable = M.is_ever_observable(utctime_start = night_start, utctime_end = night_end, time_grid_resolution = time_grid_minutes * u.minute)
         return is_observable
 
-    def decode_gsheet(self, tbl : Table, match_to_tiles : bool = False, match_tolerance_minutes : float = 3):
-        """
-        Decodes a Google Sheet and register the alert data as an astropy.Table.
+    # def decode_gsheet(self, tbl : Table, match_to_tiles : bool = False, match_tolerance_minutes : float = 3):
+    #     """
+    #     Decodes a Google Sheet and register the alert data as an astropy.Table.
         
-        Parameters:
-        - tbl: astropy.Table, the Google Sheet table
+    #     Parameters:
+    #     - tbl: astropy.Table, the Google Sheet table
         
-        """
-        self.rawdata = tbl
-        self.alert_data = {col: tbl[col].tolist() for col in tbl.colnames}
-        self.alert_type = 'googlesheet'
+    #     """
+    #     self.rawdata = tbl
+    #     self.alert_data = {col: tbl[col].tolist() for col in tbl.colnames}
+    #     self.alert_type = 'googlesheet'
         
-        # Set/Modify the columns to the standard format
-        formatted_tbl = Table()
-        for key, value in self.default_config.items():
-            formatted_tbl[key] = [value] * len(tbl)
+    #     # Set/Modify the columns to the standard format
+    #     formatted_tbl = Table()
+    #     for key, value in self.default_config.items():
+    #         formatted_tbl[key] = [value] * len(tbl)
         
-        # Update values from alert_data if the key exists
-        for key in tbl.keys():
-            noramlized_key = self._normalize_required_keys(key)
-            if noramlized_key:
-                formatted_tbl[noramlized_key] = tbl[key]
-            else:
-                print('The key is not found in the key variants: ', key)
+    #     # Update values from alert_data if the key exists
+    #     for key in tbl.keys():
+    #         noramlized_key = self._normalize_required_keys(key)
+    #         if noramlized_key:
+    #             formatted_tbl[noramlized_key] = tbl[key]
+    #         else:
+    #             print('The key is not found in the key variants: ', key)
         
-        # Convert the RA, Dec to degrees
-        formatted_tbl['RA'], formatted_tbl['De'] = self._convert_to_deg(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
+    #     # Convert the RA, Dec to degrees
+    #     formatted_tbl['RA'], formatted_tbl['De'] = self._convert_to_deg(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
                 
-        # Match the RA, Dec to the RIS tiles
-        if match_to_tiles:
-            self.is_matched_to_tiles = True
-            tile_info, matched_indices = self._match_RIS_tile(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist(), match_tolerance_minutes = match_tolerance_minutes)
-            if len(tile_info) == 0:
-                raise ValueError(f'No matching tile found for RA = {formatted_tbl["RA"]}, Dec = {formatted_tbl["De"]}')
-            # Sort the formatted_tbl by the matched_indices
-            formatted_tbl = formatted_tbl[matched_indices]
+    #     # Match the RA, Dec to the RIS tiles
+    #     if match_to_tiles:
+    #         self.is_matched_to_tiles = True
+    #         tile_info, matched_indices = self._match_TOS_tile(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist(), match_tolerance_minutes = match_tolerance_minutes)
+    #         if len(tile_info) == 0:
+    #             raise ValueError(f'No matching tile found for RA = {formatted_tbl["RA"]}, Dec = {formatted_tbl["De"]}')
+    #         # Sort the formatted_tbl by the matched_indices
+    #         formatted_tbl = formatted_tbl[matched_indices]
             
-            # Update only rows where is_within_boundary is True
-            within_boundary_mask = tile_info['is_within_boundary']
-            if np.any(within_boundary_mask):  # Ensure there are rows within boundary to update
-                within_boundary_indices = np.where(within_boundary_mask)[0]
-                objname = formatted_tbl['objname'][within_boundary_indices]
-                formatted_tbl['objname'][within_boundary_indices] = tile_info['id'][within_boundary_indices]
-                formatted_tbl['RA'][within_boundary_indices] = tile_info['ra'][within_boundary_indices]
-                formatted_tbl['De'][within_boundary_indices] = tile_info['dec'][within_boundary_indices]
-                formatted_tbl['note'][within_boundary_indices] = objname
-            self.distance_to_tile_boundary = list(tile_info['distance_to_boundary'])
+    #         # Update only rows where is_within_boundary is True
+    #         within_boundary_mask = tile_info['is_within_boundary']
+    #         if np.any(within_boundary_mask):  # Ensure there are rows within boundary to update
+    #             within_boundary_indices = np.where(within_boundary_mask)[0]
+    #             objname = formatted_tbl['objname'][within_boundary_indices]
+    #             formatted_tbl['objname'][within_boundary_indices] = tile_info['id'][within_boundary_indices]
+    #             formatted_tbl['RA'][within_boundary_indices] = tile_info['ra'][within_boundary_indices]
+    #             formatted_tbl['De'][within_boundary_indices] = tile_info['dec'][within_boundary_indices]
+    #             formatted_tbl['note'][within_boundary_indices] = objname
+    #         self.distance_to_tile_boundary = list(tile_info['distance_to_boundary'])
         
-        # Check visibility 
-        formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
+    #     # Check visibility 
+    #     formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
         
-        existing_columns = [col for col in self.required_key_variants.keys() if col in formatted_tbl.colnames]
-        self.update_time = Time.now().isot
-        self.formatted_data = formatted_tbl[existing_columns]
+    #     existing_columns = [col for col in self.required_key_variants.keys() if col in formatted_tbl.colnames]
+    #     self.update_time = Time.now().isot
+    #     self.formatted_data = formatted_tbl[existing_columns]
 
-    def decode_tbl(self, tbl : Table, match_to_tiles : bool = False, match_tolerance_minutes = 3):
+    def decode_tbl(self, tbl : Table, match_to_tiles : bool = False, match_tolerance_minutes = 3, visibility_grid_minutes : float = 10):
         """
         Decodes a Google Sheet and register the alert data as an astropy.Table.
         
@@ -162,7 +164,7 @@ class Alert:
         # Match the RA, Dec to the RIS tiles
         if match_to_tiles:
             self.is_matched_to_tiles = True
-            tile_info, matched_indices = self._match_RIS_tile(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist(), match_tolerance_minutes = match_tolerance_minutes)
+            tile_info, matched_indices = self._match_TOS_tile(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist(), match_tolerance_minutes = match_tolerance_minutes)
             if len(tile_info) == 0:
                 raise ValueError(f'No matching tile found for RA = {formatted_tbl["RA"]}, Dec = {formatted_tbl["De"]}')
             # Sort the formatted_tbl by the matched_indices
@@ -179,56 +181,56 @@ class Alert:
                 formatted_tbl['note'][within_boundary_indices] = objname
             self.distance_to_tile_boundary = list(tile_info['distance_to_boundary'])
             
-        # Check visibility 
-        formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
+        # Check visibility
+        formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist(), time_grid_minutes = visibility_grid_minutes)
         
         existing_columns = [col for col in self.required_key_variants.keys() if col in formatted_tbl.colnames]
         self.update_time = Time.now().isot
         self.formatted_data = formatted_tbl[existing_columns]
 
-    def decode_gwalert(self, tbl : Table):
-        """
-        Decodes a GW alert file and register the alert data as an astropy.Table.
+    # def decode_gwalert(self, tbl : Table):
+        # """
+        # Decodes a GW alert file and register the alert data as an astropy.Table.
         
-        Parameters:
-        - tbl: astropy.Table, the GW alert table
+        # Parameters:
+        # - tbl: astropy.Table, the GW alert table
         
-        """
-        # Read the alert data from the file
-        self.rawdata = tbl
-        self.alert_data = {col: tbl[col].tolist() for col in tbl.colnames}
-        self.alert_type = 'gw'
+        # """
+        # # Read the alert data from the file
+        # self.rawdata = tbl
+        # self.alert_data = {col: tbl[col].tolist() for col in tbl.colnames}
+        # self.alert_type = 'gw'
         
-        # Set/Modify the columns to the standard format
-        formatted_tbl = Table()
-        for key, value in self.default_config.items():
-            formatted_tbl[key] = [value] * len(tbl)
+        # # Set/Modify the columns to the standard format
+        # formatted_tbl = Table()
+        # for key, value in self.default_config.items():
+        #     formatted_tbl[key] = [value] * len(tbl)
         
-        # Update values from alert_data if the key exists         
-        # for key in tbl.keys():
-        #     noramlized_key = self._normalize_required_keys(key)
-        #     if noramlized_key:
-        #         formatted_tbl[noramlized_key] = tbl[key]
-        #     else:
-        #         print('The key is not found in the key variants: ', key)
+        # # Update values from alert_data if the key exists         
+        # # for key in tbl.keys():
+        # #     noramlized_key = self._normalize_required_keys(key)
+        # #     if noramlized_key:
+        # #         formatted_tbl[noramlized_key] = tbl[key]
+        # #     else:
+        # #         print('The key is not found in the key variants: ', key)
 
-        # Convert the RA, Dec to degrees
-        formatted_tbl['RA'], formatted_tbl['De'] = self._convert_to_deg(tbl['ra'].tolist(), tbl['dec'].tolist())
+        # # Convert the RA, Dec to degrees
+        # formatted_tbl['RA'], formatted_tbl['De'] = self._convert_to_deg(tbl['ra'].tolist(), tbl['dec'].tolist())
         
-        # Modify the objname to the standard format                    
-        formatted_tbl['objname'] = ['T%.5d'%int(objname) if not str(objname).startswith('T') else objname for objname in tbl['id']]
-        formatted_tbl['priority'] = tbl['rank']
-        formatted_tbl['objtype'] = 'GECKO'
-        formatted_tbl['note'] = tbl['obj'] # Tile observation -> objname is stored in "Note"
+        # # Modify the objname to the standard format                    
+        # formatted_tbl['objname'] = ['T%.5d'%int(objname) if not str(objname).startswith('T') else objname for objname in tbl['id']]
+        # formatted_tbl['priority'] = tbl['rank']
+        # formatted_tbl['objtype'] = 'GECKO'
+        # formatted_tbl['note'] = tbl['obj'] # Tile observation -> objname is stored in "Note"
         
-        # Check visibility 
-        formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
+        # # Check visibility 
+        # formatted_tbl['is_observable'] = self._check_visibility(formatted_tbl['RA'].tolist(), formatted_tbl['De'].tolist())
         
-        existing_columns = [col for col in self.required_key_variants.keys() if col in formatted_tbl.colnames]
-        self.update_time = Time.now().isot
-        self.formatted_data = formatted_tbl[existing_columns]
+        # existing_columns = [col for col in self.required_key_variants.keys() if col in formatted_tbl.colnames]
+        # self.update_time = Time.now().isot
+        # self.formatted_data = formatted_tbl[existing_columns]
     
-    def decode_mail(self, mail_dict, match_to_tiles = True, match_tolerance_minutes = 3):
+    def decode_mail(self, mail_dict, match_to_tiles = True, match_tolerance_minutes = 3, visibility_grid_minutes : float = 10):
         """
         Decodes a mail alert and register the alert data as an astropy.Table.
         
@@ -282,7 +284,7 @@ class Alert:
 
         # Match the RA, Dec to the RIS tiles
         if match_to_tiles:
-            tile_info, matched_indices = self._match_RIS_tile(formatted_dict['RA'], formatted_dict['De'], match_tolerance_minutes = match_tolerance_minutes)
+            tile_info, matched_indices = self._match_TOS_tile(formatted_dict['RA'], formatted_dict['De'], match_tolerance_minutes = match_tolerance_minutes)
             if len(tile_info) == 0:
                 raise ValueError(f'No matching tile found for RA = {formatted_dict["RA"]}, Dec = {formatted_dict["De"]}')
 
@@ -307,18 +309,29 @@ class Alert:
             if isinstance(value, str):
                 formatted_dict[key] = value.replace(" ", "")
                 
-        # If is_ToO is not defined, set it to 0
+        # If is_ToO is not defined, set it to 1
         if str(formatted_dict['is_ToO']).upper() == 'TRUE':
             formatted_dict['is_ToO'] = 1
         else:
             formatted_dict['is_ToO'] = 0
+
+        # If is_rapidToO is not defined, set it to 0
+        if str(formatted_dict['is_rapidToO']).upper() == 'TRUE':
+            formatted_dict['is_rapidToO'] = 1
+        else:
+            formatted_dict['is_rapidToO'] = 0
             
         # If specmode is defined, remove the extension
         if 'specmode' in alert_dict_normalized.keys():
-            formatted_dict['specmode'] = alert_dict_normalized['specmode'].split('.')[0]    
-            
+            formatted_dict['specmode'] = alert_dict_normalized['specmode'].split('.')[0]
+
+        # For Single obsmode, colormode and specmode are not applicable
+        if str(formatted_dict.get('obsmode', '')).lower() == 'single':
+            formatted_dict['colormode'] = 'None'
+            formatted_dict['specmode'] = 'None'
+
         # Check visibility
-        formatted_dict['is_observable'] = self._check_visibility([formatted_dict['RA']], [formatted_dict['De']])[0]
+        formatted_dict['is_observable'] = self._check_visibility([formatted_dict['RA']], [formatted_dict['De']], time_grid_minutes = visibility_grid_minutes)[0]
 
         # Convert the dict to astropy.Table
         formatted_tbl = Table()
@@ -425,6 +438,7 @@ class Alert:
             'exptime': ['exptime', 'exposure', 'exposuretime', 'exposure time', 'singleexposure', 'singleframeexposure', 'single frame exposure', 'single exposure time (seconds)'],
             'count': ['count', 'counts', 'imagecount', 'numbercount', 'image count', 'number count'],
             'obsmode': ['obsmode', 'observationmode', 'mode'],
+            'colormode': ['colormode', 'color mode', 'color_mode'],
             'specmode': ['specmode', 'spectralmode', 'spectral mode', 'selectedspecfile'],
             'filter_': ['filter', 'filters', 'selectedfilters'],
             'ntelescope': ['ntelescopes', 'ntelescope', 'numberoftelescopes', 'number of telescopes', 'selectedtelnumber'],
@@ -435,7 +449,8 @@ class Alert:
             'objtype': ['objtype', 'objecttype'],
             'note': ['note', 'notes'],
             'comments': ['comment', 'comments'],
-            'is_ToO': ['is_too', 'is too', 'abortobservation', 'abort current observation'],
+            'is_ToO': ['is_too', 'istoo','Is_ToO','IS_TOO','IS_ToO'],
+            'is_rapidToO': ['israpidtoo','is_rapidtoo','is_rapid_too','is rapid too', 'Is_Rapid_ToO','Is_rapid_ToO', 'IS_RAPID_TOO', 'IS_RAPID_ToO', 'abortobservation', 'abort current observation'],
             'obs_starttime': ['obsstarttime', 'starttime', 'start time', 'obs_starttime'],
             'id': ['id', 'uuid', 'uniqueid', 'unique id', 'unique identifier'],
             'is_observable': ['is_observable']
@@ -447,27 +462,11 @@ class Alert:
         }
         return sorted_required_key_variants
 #%%
-if __name__ == '__main__':
-    from tcspy.configuration import mainConfig
-    from tcspy.utils.connector import GmailConnector
-    from tcspy.utils.connector import GoogleSheetConnector
-    config = mainConfig().config
-    G = GmailConnector(user_account = config['GMAIL_USERNAME'], 
-                                        user_token_path = config['GMAIL_TOKENPATH'])
-            
-    Gsheet = GoogleSheetConnector(spreadsheet_url = config['GOOGLESHEET_URL'], 
-                                    authorize_json_file = config['GOOGLESHEET_AUTH'],
-                                    scope = config['GOOGLESHEET_SCOPE'])            
-
-    #G.login()
-    mail_str = G.read_mail(since_days = 10)
 # %%
 if __name__ == '__main__':
     alert = Alert()
     #ABC = Gsheet.read_sheet(sheet_name = '241210')
     #alert.decode_gsheet(tbl= ABC, match_to_tiles = True, match_tolerance_minutes= 10)
-    alert.decode_mail(mail_str[-1], match_to_tiles = True)
-    print(alert.formatted_data)
 
 # %%
 if __name__ == '__main__':
