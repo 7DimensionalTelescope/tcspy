@@ -11,3 +11,10 @@
 
 # text
 *safemonitor*.txt
+
+# keys
+*/keys/
+
+# local/runtime artifacts
+.claude/
+utils/alert_history/
